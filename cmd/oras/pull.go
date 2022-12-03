@@ -207,18 +207,10 @@ func runPull(opts pullOptions) error {
 				}
 			}
 		}
-		name, ok := desc.Annotations[ocispec.AnnotationTitle]
-		if !ok {
-			if !opts.Verbose {
-				return nil
-			}
-			name = desc.MediaType
-		} else {
-			// named content downloaded
-			pulledEmpty = false
-		}
+
+		pulledEmpty = false
 		printed.Store(generateContentKey(desc), true)
-		return display.Print("Downloaded ", display.ShortDigest(desc), name)
+		return display.PrintStatus(desc, "Downloaded ", opts.Verbose)
 	}
 
 	// Copy
@@ -237,7 +229,7 @@ func runPull(opts pullOptions) error {
 // generateContentKey generates a unique key for each content descriptor, using
 // its digest and name if applicable.
 func generateContentKey(desc ocispec.Descriptor) string {
-	return desc.Digest.String() + desc.Annotations[ocispec.AnnotationTitle]
+	return display.ShortName(desc)
 }
 
 func printOnce(printed *sync.Map, s ocispec.Descriptor, msg string, verbose bool) error {

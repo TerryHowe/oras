@@ -45,15 +45,7 @@ func StatusPrinter(status string, verbose bool) func(context.Context, ocispec.De
 
 // PrintStatus prints transfer status.
 func PrintStatus(desc ocispec.Descriptor, status string, verbose bool) error {
-	name, ok := desc.Annotations[ocispec.AnnotationTitle]
-	if !ok {
-		// no status for unnamed content
-		if !verbose {
-			return nil
-		}
-		name = desc.MediaType
-	}
-	return Print(status, ShortDigest(desc), name)
+	return Print(status, ShortName(desc))
 }
 
 // PrintSuccessorStatus prints transfer status of successors.
