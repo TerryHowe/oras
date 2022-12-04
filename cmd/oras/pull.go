@@ -32,6 +32,8 @@ import (
 	"oras.land/oras/internal/graph"
 )
 
+const defaultMaxBytes int64 = 4 * 1024 * 1024 * 1024
+
 type pullOptions struct {
 	option.Cache
 	option.Common
@@ -183,7 +185,7 @@ func runPull(opts pullOptions) error {
 	}
 
 	ctx, _ := opts.SetLoggerLevel()
-	var dst = file.New(opts.Output)
+	var dst = file.NewWithFallbackLimit(opts.Output, defaultMaxBytes)
 	dst.AllowPathTraversalOnWrite = opts.PathTraversal
 	dst.DisableOverwrite = opts.KeepOldFiles
 
@@ -214,6 +216,8 @@ func runPull(opts pullOptions) error {
 	}
 
 	// Copy
+	copyOptions.MaxMetadataBytes = defaultMaxBytes
+	copyOptions.CopyGraphOptions.MaxMetadataBytes = defaultMaxBytes
 	desc, err := oras.Copy(ctx, src, repo.Reference.Reference, dst, repo.Reference.Reference, copyOptions)
 	if err != nil {
 		return err
