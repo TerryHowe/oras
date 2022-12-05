@@ -165,19 +165,10 @@ func runPull(opts pullOptions) error {
 
 		var ret []ocispec.Descriptor
 		for _, s := range nodes {
-			if s.Annotations[ocispec.AnnotationTitle] == "" {
-				ss, err := content.Successors(ctx, fetcher, s)
-				if err != nil {
-					return nil, err
-				}
-				if len(ss) == 0 {
-					// skip s if it is unnamed AND has no successors.
-					if err := printOnce(&printed, s, "Skipped    ", opts.Verbose); err != nil {
-						return nil, err
-					}
-					continue
-				}
+			if s.Annotations == nil {
+				s.Annotations = make(map[string]string)
 			}
+			s.Annotations[ocispec.AnnotationTitle] = display.ShortName(s)
 			ret = append(ret, s)
 		}
 

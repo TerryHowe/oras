@@ -36,8 +36,11 @@ func ShortName(desc ocispec.Descriptor) (digestString string) {
 	if desc.Annotations != nil {
 		name, ok := desc.Annotations[ocispec.AnnotationTitle]
 		if ok {
-			return name + "WTF"
+			return name
 		}
+	}
+	if desc.MediaType == "application" {
+		return ShortDigest(desc)
 	}
 	return ShortDigest(desc) + ":" + desc.MediaType
 }
