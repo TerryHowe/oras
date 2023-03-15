@@ -27,14 +27,36 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-var printLock sync.Mutex
+type Printer struct {
+	printLock sync.Mutex
+	verbose   bool
+}
+
+var printer = Printer{verbose: false}
+
+func NewPrinter(verbose bool) *Printer {
+	return &Printer{verbose: verbose}
+}
+
+// Print concurrent safe print
+func (printer *Printer) Print(a ...any) error {
+	printer.printLock.Lock()
+	defer printer.printLock.Unlock()
+	_, err := fmt.Println(a...)
+	return err
+}
+
+// VerbosePrint verbose print
+func (printer *Printer) VerbosePrint(a ...any) error {
+	if !printer.verbose {
+		return nil
+	}
+	return printer.Print(a)
+}
 
 // Print objects to display concurrent-safely
 func Print(a ...any) error {
-	printLock.Lock()
-	defer printLock.Unlock()
-	_, err := fmt.Println(a...)
-	return err
+	return printer.Print(a)
 }
 
 // StatusPrinter returns a tracking function for transfer status.

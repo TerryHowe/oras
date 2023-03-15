@@ -105,6 +105,7 @@ Example - Push a manifest to an OCI layout folder 'layout-dir' and tag with 'v1'
 
 func pushManifest(opts pushOptions) error {
 	ctx, _ := opts.SetLoggerLevel()
+	printer := display.NewPrinter()
 	var target oras.Target
 	var err error
 	target, err = opts.NewTarget(opts.Common)
@@ -174,7 +175,7 @@ func pushManifest(opts pushOptions) error {
 		}
 		return opts.Output(os.Stdout, descJSON)
 	}
-	display.Print("Pushed", opts.AnnotatedReference())
+	printer.Print("Pushed", opts.AnnotatedReference())
 	if len(opts.extraRefs) != 0 {
 		if _, err = oras.TagBytesN(ctx, display.NewTagStatusPrinter(target), mediaType, contentBytes, opts.extraRefs, tagBytesNOpts); err != nil {
 			return err
