@@ -9,9 +9,13 @@ FROM ubuntu:latest
 ARG OPENRESTY_VERSION
 ARG PATCH_FILE
 
+# Avoid APT warnings
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Install dependencies
-RUN apt-get update && \
-    apt-get install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev wget git luarocks
+RUN apt update && \
+	apt upgrade -y && \
+    apt install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev wget git luarocks
 
 # Add nginx user
 RUN useradd -r -m -d /var/cache/nginx -s /sbin/nologin nginx
@@ -80,8 +84,10 @@ RUN ./configure --add-module=/usr/src/ngx_http_proxy_connect_module ${NGINX_CONF
 
 RUN luarocks install lua-resty-http && luarocks install lua-resty-core
 
-# WORKDIR /usr/src/${OPENRESTY_VERSION}/bundle/lua-resty-core-0.1.27
+WORKDIR /
+
 RUN make install
+
 # Sanity check of binary and default nginx.conf
 RUN nginx -v && nginx -t
 
