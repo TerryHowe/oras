@@ -85,6 +85,9 @@ RUN ./configure --add-module=/tmp/ngx_http_proxy_connect_module ${NGINX_CONFIG} 
 # Add needed Lua modules
 RUN luarocks install lua-resty-http && luarocks install lua-resty-core
 
+# Clean up build directory
+RUN rm -rf /tmp/*
+
 # Run from the root directory (unset initial change to root directory)
 WORKDIR /
 
