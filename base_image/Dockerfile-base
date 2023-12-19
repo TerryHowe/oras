@@ -21,7 +21,7 @@ RUN apt update && \
 RUN useradd -r -m -d /var/cache/nginx -s /sbin/nologin nginx
 
 # Set working directory
-WORKDIR /usr/src
+WORKDIR /tmp
 
 # Clone ngx_http_proxy_connect_module
 RUN git clone https://github.com/chobits/ngx_http_proxy_connect_module.git
@@ -75,18 +75,18 @@ ARG NGINX_CONFIG="\
 		--with-stream_ssl_preread_module \
 	"
 # Compile and install OpenResty
-WORKDIR ${OPENRESTY_VERSION}
-RUN ./configure --add-module=/usr/src/ngx_http_proxy_connect_module ${NGINX_CONFIG} && \
-   patch -d build/nginx-1.21.4/ -p 1 < /usr/src/${PATCH_FILE} && \
+RUN cd ${OPENRESTY_VERSION}
+RUN ./configure --add-module=/tmp/ngx_http_proxy_connect_module ${NGINX_CONFIG} && \
+   patch -d build/nginx-1.21.4/ -p 1 < /tmp/${PATCH_FILE} && \
    make && make install \
    && ln -sf /dev/stdout /var/log/nginx/access.log \
    && ln -sf /dev/stderr /var/log/nginx/error.log
 
+# Add needed Lua modules
 RUN luarocks install lua-resty-http && luarocks install lua-resty-core
 
+# Run from the root directory (unset initial change to root directory)
 WORKDIR /
-
-RUN make install
 
 # Sanity check of binary and default nginx.conf
 RUN nginx -v && nginx -t
