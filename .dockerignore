@@ -1,0 +1,5 @@
+.git
+.gitignore
+container_cache
+certs_dir
+

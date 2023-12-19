@@ -1,0 +1,12 @@
+version: '3.7'
+services:
+  docker-registry-proxy:
+    image: cache-server:latest 
+    ports:
+      - 0.0.0.0:13128:13128 
+    volumes:
+      - ../container_cache:/container_cache
+      - ../certs_dir:/ca
+      - ../nginx.conf:/etc/nginx/nginx.conf
+      - ../auth_check.lua:/etc/nginx/auth_check.lua
+
