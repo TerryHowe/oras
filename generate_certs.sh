@@ -14,9 +14,9 @@ set -Eeuo pipefail
 DOMAIN="nvcr.io"
 PROJ_NAME="ContainerCaching"
 CAID="$(hostname -f) $(date "+%Y.%m.%d %H:%M")"
-CN_CA="${PROJ_NAME} CA Root ${CAID:0:64}"
-CN_IA="${PROJ_NAME} Intermediate ${CAID:0:64}"
-CN_WEB="${PROJ_NAME} Web Cert ${CAID:0:64}"
+CN_CA="${PROJ_NAME} CA Root ${CAID:0:32}"
+CN_IA="${PROJ_NAME} Intermediate ${CAID:0:32}"
+CN_WEB="${PROJ_NAME} Web Cert ${CAID:0:32}"
 SAN="DNS:${DOMAIN}"
 
 # Directory setup
