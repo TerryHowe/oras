@@ -56,6 +56,13 @@ spec:
           volumeMounts:
             - name: container-cache
               mountPath: /container_cache
+        - name: nginx-prometheus-exporter
+          image: nginx/nginx-prometheus-exporter:1.0
+          args:
+            - '-nginx.scrape-uri=http://localhost/nginx_status'
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
       volumes:
         - name: container-cache
           persistentVolumeClaim:

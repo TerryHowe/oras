@@ -9,7 +9,7 @@
 replicaCount: 1
 
 image:
-  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache2
+  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache22
   pullPolicy: Always
   secrets:
   - ngc-container-pull
@@ -18,5 +18,7 @@ service:
   type: NodePort
   port: 13128
 
+metrics:
+  port: 9113
 pvc:
   size: 10Gi

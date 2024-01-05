@@ -83,7 +83,7 @@ RUN ./configure --add-module=/usr/src/ngx_http_proxy_connect_module ${NGINX_CONF
    && ln -sf /dev/stderr /var/log/nginx/error.log
 
 # Add needed Lua modules
-RUN luarocks install lua-resty-http && luarocks install lua-resty-core
+RUN luarocks install lua-resty-http && luarocks install lua-resty-core && luarocks install nginx-lua-prometheus
 
 # Clean up build directory
 RUN rm -rf /tmp/*
