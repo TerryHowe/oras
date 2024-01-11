@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -9,15 +9,15 @@
 replicaCount: 1
 
 image:
-  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache22
+  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache29
   pullPolicy: Always
   secrets:
   - ngc-container-pull
 
 service:
   type: NodePort
-  http-port: 30345
-  https-port: 30346
-  
+  httpPort: 30345
+  httpsPort: 30346
+
 pvc:
   size: 10Gi

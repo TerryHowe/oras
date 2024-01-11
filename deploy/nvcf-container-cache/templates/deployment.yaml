@@ -62,6 +62,9 @@ spec:
           volumeMounts:
             - name: container-cache
               mountPath: /container_cache
+            - name: nginx-config
+              readOnly: false
+              mountPath: /conf
         - name: nginx-prometheus-exporter
           image: nginx/nginx-prometheus-exporter:1.0
           args:
@@ -73,3 +76,7 @@ spec:
         - name: container-cache
           persistentVolumeClaim:
             claimName: {{ $.Chart.Name }}-pvc
+        - name: nginx-config
+          configMap: 
+            name: nginx-config
+        
