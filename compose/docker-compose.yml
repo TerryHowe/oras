@@ -1,8 +1,9 @@
 version: '3.7'
 services:
   docker-registry-proxy:
-    image: cache-server:latest 
+    image: cache_server:latest 
     ports:
+      - 0.0.0.0:443:443 
       - 0.0.0.0:13128:13128 
     volumes:
       - ../container_cache:/container_cache

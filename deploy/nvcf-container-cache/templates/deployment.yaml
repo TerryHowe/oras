@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -43,7 +43,13 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: 13128
+              protocol: TCP
+            - name: https
+              containerPort: 443
+              protocol: TCP
+            - name: cache-metrics
+              containerPort: 9145
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -62,7 +68,7 @@ spec:
             - '-nginx.scrape-uri=http://localhost/nginx_status'
           ports:
             - name: metrics
-              containerPort: {{ .Values.metrics.port }}
+              containerPort: 9113
       volumes:
         - name: container-cache
           persistentVolumeClaim:

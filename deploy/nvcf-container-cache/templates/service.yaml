@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -15,10 +15,19 @@ metadata:
     app: {{ $.Release.Name }}
     {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ .Values.service.type | default "ClusterIP" }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.service.http-port | default 30345 }}
+      {{ if eq .Values.service.type "NodePort" }}
+      nodePort: {{ .Values.service.http-port | default 30345 }}
+      {{ end }}
       targetPort: http
       name: http
+    - port: {{ .Values.service.https-port | default 30346 }}
+      {{ if eq .Values.service.type "NodePort" }}
+      nodePort: {{ .Values.service.http-port | default 30345 }}
+      {{ end }}
+      targetPort: https
+      name: https
   selector:
     {{- include "nvcf-container-cache.selectorLabels" . | nindent 4 }}

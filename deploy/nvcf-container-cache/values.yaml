@@ -16,9 +16,8 @@ image:
 
 service:
   type: NodePort
-  port: 13128
-
-metrics:
-  port: 9113
+  http-port: 30345
+  https-port: 30346
+  
 pvc:
   size: 10Gi
