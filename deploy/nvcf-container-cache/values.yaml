@@ -9,7 +9,7 @@
 replicaCount: 1
 
 image:
-  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache29
+  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache49
   pullPolicy: Always
   secrets:
   - ngc-container-pull

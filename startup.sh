@@ -10,6 +10,11 @@ log "Entrypoint starting."
 set -Eeuo pipefail
 trap "echo TRAPed signal" HUP INT QUIT TERM
 
+# Copy nginx config from /conf directory mounted by configMap to /etc/nginx/nginx.conf
+# If we mount the configMap directly to the nginx path, it gets mounted as Read-Only
+# and doesn't allow changes to /etc/nginx/resolvers.conf.
+cp /conf/nginx.conf /etc/nginx/
+
 # Extract the first IPv4 nameserver address from /etc/resolv.conf and
 # set it as the resolver in /etc/nginx/resolvers.conf with IPv6 disabled.
 

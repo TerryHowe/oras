@@ -11,7 +11,7 @@ log() {
 set -Eeuo pipefail
 
 # Constants for certificate names
-DOMAIN="nvcr.io"
+DOMAIN="nvcf-container-cache.container-caching.svc.cluster.local"
 PROJ_NAME="ContainerCaching"
 CAID="$(hostname -f) $(date "+%Y.%m.%d %H:%M")"
 CN_CA="${PROJ_NAME} CA Root ${CAID:0:32}"
