@@ -9,7 +9,7 @@
 replicaCount: 1
 
 image:
-  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache49
+  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache50
   pullPolicy: Always
   secrets:
   - ngc-container-pull
@@ -20,4 +20,4 @@ service:
   httpsPort: 30346
 
 pvc:
-  size: 10Gi
+  size: 200Gi

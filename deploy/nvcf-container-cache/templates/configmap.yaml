@@ -10,6 +10,10 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nginx-config
+  namespace: {{ $.Release.Namespace | quote }}
+  labels:
+    app: {{ $.Release.Name }}
+    {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 data:
   nginx.conf: |-
     user  nginx;
