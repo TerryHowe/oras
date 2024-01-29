@@ -68,3 +68,9 @@ metrics:
   # Size for storing cache Metrics (default: 10m).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
   cacheMetricsStorageSize: 10m
+
+# Custom annotations to be added to the pod.
+podAnnotations: {}
+
+# Custom labels to be added to the pod.
+podLabels: {}
