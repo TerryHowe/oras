@@ -21,3 +21,12 @@ service:
 
 pvc:
   size: 200Gi
+
+metrics:
+  prometheusExporterPort: 9113
+  cacheMetricsPort: 9145
+
+cache:
+  maxSize: 2000g
+  valid: 60d
+  inactive: 60d
