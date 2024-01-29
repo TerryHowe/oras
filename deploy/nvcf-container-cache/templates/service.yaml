@@ -17,13 +17,7 @@ metadata:
 spec:
   type: {{ .Values.service.type | default "ClusterIP" }}
   ports:
-    - port: {{ .Values.service.httpPort | default 30345 }}
-      {{ if eq .Values.service.type "NodePort" }}
-      nodePort: {{ .Values.service.httpPort | default 30345 }}
-      {{ end }}
-      targetPort: http
-      name: http
-    - port: {{ .Values.service.httpsPort | default 30346 }}
+    - port: {{ .Values.service.httpsPort | default 30345 }}
       {{ if eq .Values.service.type "NodePort" }}
       nodePort: {{ .Values.service.httpsPort | default 30345 }}
       {{ end }}

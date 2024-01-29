@@ -38,18 +38,15 @@ spec:
     {{- end }}
     {{- end }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: nginx-proxy
           image: {{ required "Property '.image.repository' is required." $.Values.image.repository | quote }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: IfNotPresent
           ports:
-            - name: http
-              containerPort: 13128
-              protocol: TCP
             - name: https
               containerPort: 443
               protocol: TCP
             - name: cache-metrics
-              containerPort: 9145
+              containerPort: {{ .Values.metrics.cacheMetricsPort | default 9145 }}
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -63,7 +60,6 @@ spec:
             - name: container-cache
               mountPath: /container_cache
             - name: nginx-config
-              readOnly: false
               mountPath: /conf
         - name: nginx-prometheus-exporter
           image: nginx/nginx-prometheus-exporter:1.0
@@ -71,11 +67,11 @@ spec:
             - '-nginx.scrape-uri=http://localhost/nginx_status'
           ports:
             - name: metrics
-              containerPort: 9113
+              containerPort: {{ .Values.metrics.prometheusExporterPort | default 9113 }}
       volumes:
         - name: container-cache
           persistentVolumeClaim:
-            claimName: {{ $.Chart.Name }}-pvc
+            claimName: {{ $.Release.Name }}-pvc
         - name: nginx-config
           configMap: 
             name: nginx-config

@@ -6,27 +6,45 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
+# Number of replicas to create of Container Cache.
 replicaCount: 1
 
+# Container image information used by Container Cache.
 image:
+  # Name of the container image containing Container Cache Nginx Proxy.
   repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache50
-  pullPolicy: Always
+  # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
+  # The name of the Kubernetes secret to be used (NOT the secret itself).
   - ngc-container-pull
 
-service:
-  type: NodePort
-  httpPort: 30345
-  httpsPort: 30346
+# Configuration options related to how Container Cache is configured.
+cache:
+  # Max size of the cache (default: 2TB).
+  maxSize: 2000g
+  # Period a resource can remain in the cache without being accessed (default: 60d).
+  inactive: 60d
+  # Period a cache is valid for if the resource doesn't become inactive first (default: 60d).
+  valid: 60d
 
+# Configuration options related to how Container Cache Persistent Volume Claim is configured.
 pvc:
+  # Size of persistent volume claim (default: 100Gi )
   size: 200Gi
 
-metrics:
-  prometheusExporterPort: 9113
-  cacheMetricsPort: 9145
+# Configuration options related to how Container Cache Service is configured.
+service:
+  # Type of Kubernetes service connection used by the server to provide network API services (default: ClusterIP).
+  # Valid options are ExternalName, ClusterIP, NodePort, and LoadBalancer.
+  type: NodePort
 
-cache:
-  maxSize: 2000g
-  valid: 60d
-  inactive: 60d
+  # Port to use to connect to the Container Cache Service (default: 30345).
+  port: 30345
+
+# Configuration options related to how Container Cache Metrics are configured.
+metrics:
+  # Port to use to connect to the Nginx Prometheus Exporter (default: 9113).
+  prometheusExporterPort: 9113
+
+  # Port to use to connect to the Nginx Cache Metrics (default: 9145).
+  cacheMetricsPort: 9145

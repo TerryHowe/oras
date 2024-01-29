@@ -9,7 +9,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ $.Chart.Name }}-pv
+  name: {{ $.Release.Name }}-pv
   namespace: {{ $.Release.Namespace | quote }}
   labels:
     app: {{ $.Release.Name }}
@@ -19,5 +19,7 @@ spec:
     storage: {{ $.Values.pvc.size | default "10Gi" | quote }}
   accessModes:
     - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
   hostPath:
     path: "/container_cache"
+    

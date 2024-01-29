@@ -110,7 +110,7 @@ data:
         gzip off;
     
         # Configure cache size and Path
-        proxy_cache_path /container_cache levels=1:2 max_size={{ .Values.cache.maxSize }} inactive={{ .Values.cache.valid }} keys_zone=cache:10m use_temp_path=off;
+        proxy_cache_path /container_cache levels=1:2 max_size={{ .Values.cache.maxSize | default 2000g }} inactive={{ .Values.cache.valid | default 60d }} keys_zone=cache:10m use_temp_path=off;
 
         # The caching layer
         server {
@@ -173,7 +173,7 @@ data:
             proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
             proxy_ssl_verify_depth 2;
             proxy_ssl_session_reuse off;
-            proxy_cache_valid 200 206 {{ .Values.cache.valid }};
+            proxy_cache_valid 200 206 {{ .Values.cache.valid | default 60d }};
 
             # For blob requests by digest, do cache, and treat redirects.
             location ~ ^/v2/(.*)/blobs/sha256:(.*) {
