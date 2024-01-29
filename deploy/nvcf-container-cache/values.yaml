@@ -13,6 +13,7 @@ replicaCount: 1
 image:
   # Name of the container image containing Container Cache Nginx Proxy.
   repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache50
+  
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
   # The name of the Kubernetes secret to be used (NOT the secret itself).
@@ -20,10 +21,16 @@ image:
 
 # Configuration options related to how Container Cache is configured.
 cache:
+
+  # Size for storing cache keys (default: 10m).
+  keyStorageSize: 10m 
+
   # Max size of the cache (default: 2TB).
   maxSize: 2000g
+
   # Period a resource can remain in the cache without being accessed (default: 60d).
   inactive: 60d
+  
   # Period a cache is valid for if the resource doesn't become inactive first (default: 60d).
   valid: 60d
 
@@ -48,3 +55,6 @@ metrics:
 
   # Port to use to connect to the Nginx Cache Metrics (default: 9145).
   cacheMetricsPort: 9145
+
+  # Size for storing cache Metrics (default: 10m).
+  cacheMetricsStorageSize: 10m
