@@ -27,7 +27,7 @@ spec:
       {{- end }}
       labels:
         {{- include "nvcf-container-cache.labels" . | nindent 8 }}
-	{{- with .Values.podLabels }}
+	      {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
@@ -39,7 +39,7 @@ spec:
     {{- end }}
       containers:
         - name: nginx-proxy
-          image: {{ required "Property '.image.repository' is required." $.Values.image.repository | quote }}
+          image: {{ required "Property '.images.server' is required." $.Values.images.server | quote }}
           imagePullPolicy: IfNotPresent
           ports:
             - name: https
@@ -62,7 +62,8 @@ spec:
             - name: nginx-config
               mountPath: /conf
         - name: nginx-prometheus-exporter
-          image: nginx/nginx-prometheus-exporter:1.0
+          image: {{ required "Property '.images.exporter' is required." $.Values.images.exporter | quote }}
+          imagePullPolicy: IfNotPresent
           args:
             - '-nginx.scrape-uri=http://localhost/nginx_status'
           ports:

@@ -10,9 +10,12 @@
 replicaCount: 1
 
 # Container image information used by Container Cache.
-image:
+images:
   # Name of the container image containing Container Cache Nginx Proxy.
-  repository: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache50
+  server: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache50
+
+  # Name of the container image containing Nginx Prometheus Exporter.
+  exporter: nginx/nginx-prometheus-exporter:1.0
   
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
