@@ -110,7 +110,7 @@ data:
         gzip off;
     
         # Configure cache size and Path
-        proxy_cache_path /container_cache levels=1:2 max_size={{ .Values.cache.maxSize | default 2000g }} inactive={{ .Values.cache.valid | default 60d }} keys_zone=cache:{{ .Values.cache.keyStorageSize | default 10m }} use_temp_path=off;
+        proxy_cache_path /container_cache levels=1:2 max_size={{ .Values.cache.maxSize | default 180g }} inactive={{ .Values.cache.valid | default 60d }} keys_zone=cache:{{ .Values.cache.keyStorageSize | default 10m }} use_temp_path=off;
 
         # The caching layer
         server {

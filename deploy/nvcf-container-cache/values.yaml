@@ -23,15 +23,19 @@ image:
 cache:
 
   # Size for storing cache keys (default: 10m).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
   keyStorageSize: 10m 
 
-  # Max size of the cache (default: 2TB).
-  maxSize: 2000g
+  # Max size of the cache (default: 180g).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
+  maxSize: 180g
 
   # Period a resource can remain in the cache without being accessed (default: 60d).
+  # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   inactive: 60d
   
-  # Period a cache is valid for if the resource doesn't become inactive first (default: 60d).
+  # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
+  # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   valid: 60d
 
 # Configuration options related to how Container Cache Persistent Volume Claim is configured.
@@ -57,4 +61,5 @@ metrics:
   cacheMetricsPort: 9145
 
   # Size for storing cache Metrics (default: 10m).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
   cacheMetricsStorageSize: 10m
