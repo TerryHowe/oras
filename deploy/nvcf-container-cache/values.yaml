@@ -9,6 +9,9 @@
 # Number of replicas to create of Container Cache.
 replicaCount: 1
 
+# Domain of target Host where the proxy passes the request to (default: nvcr.io).
+targetHost: nvcr.io
+
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
@@ -16,27 +19,26 @@ images:
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
-  
+
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
-  # The name of the Kubernetes secret to be used (NOT the secret itself).
-  - ngc-container-pull
+    # The name of the Kubernetes secret to be used (NOT the secret itself).
+    - ngc-container-pull
 
 # Configuration options related to how Container Cache is configured.
 cache:
-
   # Size for storing cache keys (default: 10m).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
-  keyStorageSize: 10m 
+  keyStorageSize: 10m
 
-  # Max size of the cache (default: 180g).
+  # Max size of the cache (default: 80g).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
   maxSize: 180g
 
   # Period a resource can remain in the cache without being accessed (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   inactive: 60d
-  
+
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   valid: 60d

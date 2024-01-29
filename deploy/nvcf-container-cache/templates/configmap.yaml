@@ -34,7 +34,7 @@ data:
         lua_package_path "/usr/src/openresty-1.21.4.3/bundle/lua-resty-core-0.1.27/lib/?.lua;;";
 
         # Cache Metrics are updated at every log request processing phase.
-        lua_shared_dict cache_metrics {{ .Values.metrics.cacheMetricsStorageSize | default 10m }};
+        lua_shared_dict cache_metrics {{ $.Values.metrics.cacheMetricsStorageSize | default "10m" }};
         
         include       /etc/nginx/mime.types;
         default_type  application/octet-stream;
@@ -110,7 +110,7 @@ data:
         gzip off;
     
         # Configure cache size and Path
-        proxy_cache_path /container_cache levels=1:2 max_size={{ .Values.cache.maxSize | default 180g }} inactive={{ .Values.cache.valid | default 60d }} keys_zone=cache:{{ .Values.cache.keyStorageSize | default 10m }} use_temp_path=off;
+        proxy_cache_path /container_cache levels=1:2 max_size={{ $.Values.cache.maxSize | default "80g" }} inactive={{ $.Values.cache.valid | default "60d" }} keys_zone=cache:{{ $.Values.cache.keyStorageSize | default "10m" }} use_temp_path=off;
 
         # The caching layer
         server {
@@ -127,7 +127,7 @@ data:
 
             # Target Host config
             set $docker_proxy_request_type "unknown";
-            set $target_host "stg.nvcr.io";
+            set $target_host {{ $.Values.targetHost | default "nvcr.io" }};
 
             # Send upstream status as header
             add_header X-Docker-Registry-Proxy-Cache-Upstream-Status "$upstream_cache_status";
@@ -173,7 +173,7 @@ data:
             proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
             proxy_ssl_verify_depth 2;
             proxy_ssl_session_reuse off;
-            proxy_cache_valid 200 206 {{ .Values.cache.valid | default 60d }};
+            proxy_cache_valid 200 206 {{ $.Values.cache.valid | default "60d" }};
 
             # For blob requests by digest, do cache, and treat redirects.
             location ~ ^/v2/(.*)/blobs/sha256:(.*) {

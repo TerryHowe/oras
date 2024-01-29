@@ -27,11 +27,11 @@ spec:
       {{- end }}
       labels:
         {{- include "nvcf-container-cache.labels" . | nindent 8 }}
-	      {{- with .Values.podLabels }}
+        {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-    {{- with $.Values.image.secrets }}
+    {{- with $.Values.images.secrets }}
       imagePullSecrets:
     {{- range $idx, $item := . }}
       - name: {{ $item }}
@@ -48,14 +48,6 @@ spec:
             - name: cache-metrics
               containerPort: {{ .Values.metrics.cacheMetricsPort | default 9145 }}
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
           volumeMounts:
             - name: container-cache
               mountPath: /container_cache
@@ -75,5 +67,5 @@ spec:
             claimName: {{ $.Release.Name }}-pvc
         - name: nginx-config
           configMap: 
-            name: nginx-config
+            name: {{ $.Release.Name }}-config
         
