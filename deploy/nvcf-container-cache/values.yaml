@@ -10,12 +10,12 @@
 replicaCount: 1
 
 # Domain of target Host where the proxy passes the request to (default: nvcr.io).
-targetHost: nvcr.io
+targetHost: stg.nvcr.io
 
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
-  server: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache50
+  server: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache53
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
@@ -59,12 +59,6 @@ service:
 
 # Configuration options related to how Container Cache Metrics are configured.
 metrics:
-  # Port to use to connect to the Nginx Prometheus Exporter (default: 9113).
-  prometheusExporterPort: 9113
-
-  # Port to use to connect to the Nginx Cache Metrics (default: 9145).
-  cacheMetricsPort: 9145
-
   # Size for storing cache Metrics (default: 10m).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
   cacheMetricsStorageSize: 10m

@@ -313,17 +313,20 @@ data:
                 proxy_cache off;
                 proxy_pass https://$target_host;
             }
+        }
 
-            
-            location /nginx_status {
-                stub_status on;
-                allow 127.0.0.1;
-                deny all;
-                access_log off;
+        # Health check
+        server {
+            listen 80;
+            access_log  off;
+            # Health check endpoint
+            location /healthz {
+                add_header Content-Type text/plain;
+                return 200 "The Container Caching Proxy is running!";
             }
         }
 
-        
+        # Metrics
         server {
             listen 9145;
             access_log off;
@@ -331,6 +334,12 @@ data:
                 content_by_lua_block {
                     prometheus:collect()
                 }
+            }
+
+            location /nginx_status {
+                stub_status on;
+                allow 127.0.0.1;
+                deny all;
             }
         }
     }

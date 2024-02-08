@@ -42,12 +42,23 @@ spec:
           image: {{ required "Property '.images.server' is required." $.Values.images.server | quote }}
           imagePullPolicy: IfNotPresent
           ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
             - name: https
               containerPort: 443
               protocol: TCP
             - name: cache-metrics
-              containerPort: {{ .Values.metrics.cacheMetricsPort | default 9145 }}
+              containerPort: 9145
               protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
           volumeMounts:
             - name: container-cache
               mountPath: /container_cache
@@ -57,10 +68,10 @@ spec:
           image: {{ required "Property '.images.exporter' is required." $.Values.images.exporter | quote }}
           imagePullPolicy: IfNotPresent
           args:
-            - '-nginx.scrape-uri=http://localhost/nginx_status'
+            - '-nginx.scrape-uri=http://localhost:9145/nginx_status'
           ports:
             - name: metrics
-              containerPort: {{ .Values.metrics.prometheusExporterPort | default 9113 }}
+              containerPort: 9113
       volumes:
         - name: container-cache
           persistentVolumeClaim:
