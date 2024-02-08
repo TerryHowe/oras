@@ -84,9 +84,6 @@ data:
             '"upstream":"$upstream_addr"'
             '"upstream_status":"$upstream_status",'
             '"ssl_protocol":"$ssl_protocol",'
-            '"connect_host":"$connect_host",'
-            '"connect_port":"$connect_port",'
-            '"connect_addr":"$connect_addr",'
             '"upstream_http_location":"$upstream_http_location",'
             '"upstream_cache_status":"$upstream_cache_status",'
             '"connection":"$connection",'
@@ -95,6 +92,7 @@ data:
             '"upstream_response_time":"$upstream_response_time",'
             '"request_time":"$request_time",'
             '"docker_proxy_request_type":"$docker_proxy_request_type",'
+            '"disable_cache":"$disable_cache",'
             # '"http_authorization":"$http_authorization",' # Keep Auth out of the logs unless debugging
         '}';
 
@@ -117,6 +115,8 @@ data:
             # Listen on 443, for all hostnames.
             listen 443 ssl default_server;
             server_name proxy_caching_;
+
+            set $disable_cache "3"; # Auth check yet to be performed
 
             # Hide/ignore headers from caching. S3 especially likes to send Expires headers in the past in some situations.
             proxy_hide_header      Set-Cookie;
@@ -175,8 +175,34 @@ data:
             proxy_ssl_session_reuse off;
             proxy_cache_valid 200 206 {{ $.Values.cache.valid | default "60d" }};
 
+            # Lua SSL config
+            lua_ssl_verify_depth 2;
+            lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+
             # For blob requests by digest, do cache, and treat redirects.
             location ~ ^/v2/(.*)/blobs/sha256:(.*) {
+
+                # Validate credentials before serving manifests.
+                set $disable_cache "1"; # disabled to serve from cache by default
+                access_by_lua_block {
+                    local http = require "resty.http"
+                    local httpc = http.new()
+                    local res, err = httpc:request_uri("https://" .. ngx.var.target_host, {
+                        method = "HEAD",
+                        headers = {
+                            ["Authorization"] = ngx.var.http_authorization
+                        }
+                    })
+                    
+                    if res and res.status == 200 then
+                        ngx.log(ngx.INFO, "Credentials validated successfully.")
+                        ngx.var.disable_cache = "0"; # Allow serving from cache
+                    else
+                        ngx.log(ngx.INFO, "Invalid credentials.") # Bypass cache
+                    end
+                }
+
+                proxy_cache_bypass $disable_cache;
                 set $docker_proxy_request_type "blob-by-digest";
                 proxy_pass https://$target_host;
                 proxy_set_header Host $target_host;
@@ -198,6 +224,26 @@ data:
 
             # For manifest requests by digest, do cache, and treat redirects.
             location ~ ^/v2/(.*)/manifests/sha256:(.*) {
+                # Validate credentials before serving manifests.
+                set $disable_cache "1"; # disabled to serve from cache by default
+                access_by_lua_block {
+                    local http = require "resty.http"
+                    local httpc = http.new()
+                    local res, err = httpc:request_uri("https://" .. ngx.var.target_host, {
+                        method = "HEAD",
+                        headers = {
+                            ["Authorization"] = ngx.var.http_authorization
+                        }
+                    })
+                    
+                    if res and res.status == 200 then
+                        ngx.log(ngx.INFO, "Credentials validated successfully.")
+                        ngx.var.disable_cache = "0"; # Allow serving from cache
+                    else
+                        ngx.log(ngx.INFO, "Invalid credentials.") # Bypass cache
+                    end
+                }
+
                 set $docker_proxy_request_type "manifest-by-digest";
                 add_header X-Docker-Registry-Proxy-Cache-Upstream-Status "$upstream_cache_status";
                 add_header X-Docker-Registry-Proxy-Cache-Type "$docker_proxy_request_type";
@@ -268,6 +314,7 @@ data:
                 proxy_pass https://$target_host;
             }
 
+            
             location /nginx_status {
                 stub_status on;
                 allow 127.0.0.1;
@@ -276,7 +323,7 @@ data:
             }
         }
 
-
+        
         server {
             listen 9145;
             access_log off;
