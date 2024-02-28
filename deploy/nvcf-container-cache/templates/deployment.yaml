@@ -21,8 +21,13 @@ spec:
       {{- include "nvcf-container-cache.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
       annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-inject-status: update
+        vault.hashicorp.com/agent-configmap: {{ $.Release.Name }}-vault-config
+        vault.hashicorp.com/secret-volume-path: "/vault/secrets"
+      {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
@@ -31,6 +36,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      serviceAccountName: container-cache
     {{- with $.Values.images.secrets }}
       imagePullSecrets:
     {{- range $idx, $item := . }}
@@ -43,10 +49,10 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 13129
               protocol: TCP
             - name: https
-              containerPort: 443
+              containerPort: 13128
               protocol: TCP
             - name: cache-metrics
               containerPort: 9145
@@ -63,7 +69,10 @@ spec:
             - name: container-cache
               mountPath: /container_cache
             - name: nginx-config
-              mountPath: /conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: token
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount-vault
         - name: nginx-prometheus-exporter
           image: {{ required "Property '.images.exporter' is required." $.Values.images.exporter | quote }}
           imagePullPolicy: IfNotPresent
@@ -73,10 +82,15 @@ spec:
             - name: metrics
               containerPort: 9113
       volumes:
+        - name: token
+          projected:
+            sources:
+            - serviceAccountToken:
+                path: token
+                audience: https://stg.vault.nvidia.com
         - name: container-cache
           persistentVolumeClaim:
             claimName: {{ $.Release.Name }}-pvc
         - name: nginx-config
           configMap: 
             name: {{ $.Release.Name }}-config
-        

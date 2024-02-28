@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: container-cache
+  namespace: {{ $.Release.Namespace | quote }}
+  labels:
+    app: {{ $.Release.Name }}
+    {{- include "nvcf-container-cache.labels" . | nindent 4 }}

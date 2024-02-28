@@ -1,0 +1,97 @@
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: {{ $.Release.Name }}-vault-config
+    namespace: {{ $.Release.Namespace | quote }}
+data:
+  config.hcl: |                        # Config for Vault Agent Sidecar container
+    "auto_auth" = {
+      "method" = {
+        "type" = "jwt"
+        "mount_path" = "auth/jwt/azure/sis-azure-stage/regions/scus/getty"
+        "namespace" = "nvcf"
+        "config" = {
+          "path" = "/var/run/secrets/kubernetes.io/serviceaccount-vault/token"
+          "role" = "container-cache"
+          skip_jwt_cleanup = true
+        }
+      }
+      "sink" = {
+        "config" = {
+          "path" = "/home/vault/.token"        # Use different paths for containers
+        }
+        "type" = "file"
+      }
+    }
+
+    "exit_after_auth" = false                  # false for Vault Agent Sidecar container
+
+    "pid_file" = "/home/vault/.pid"
+
+    "template" {
+      "source" = "/vault/configs/template.hcl"
+      "destination" = "/vault/secrets/secrets_pkiCert.tmp"
+      "exec" {
+        "command" = "cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain.pem > /vault/secrets/certs/nginx-proxy.pem"
+      }
+      error_on_missing_key = true
+    }
+
+    "vault" = {
+      "address" = "https://stg.vault.nvidia.com"
+    }
+
+  config-init.hcl: |                   # Config for Vault Agent Init container
+    "auto_auth" = {
+      "method" = {
+        "type" = "jwt"
+        "mount_path" = "auth/jwt/azure/sis-azure-stage/regions/scus/getty"
+        "namespace" = "nvcf"
+        "config" = {
+          "path" = "/var/run/secrets/kubernetes.io/serviceaccount-vault/token"
+          "role" = "container-cache"
+          skip_jwt_cleanup = true
+        }
+      }
+      "sink" = {
+        "config" = {
+         "path" = "/home/vault/.token-init"    # Use different paths for containers
+        }
+        "type" = "file"
+      }
+    }
+    "exit_after_auth" = true                   # true for Vault Agent Init container
+    "pid_file" = "/home/vault/.pid"
+
+    "template" {
+      "source" = "/vault/configs/template.hcl"
+      "destination" = "/vault/secrets/secrets_pkiCert.tmp"
+      "exec" {
+        "command" = "cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain.pem > /vault/secrets/certs/nginx-proxy.pem"
+      }
+      error_on_missing_key = true
+    }
+    
+    "vault" = {
+      "address" = "https://stg.vault.nvidia.com"
+    }
+
+  template.hcl: |
+    {{ "{{" }} $hostIp := env "HOST_IP" {{ "}}" }}
+    {{ "{{" }} $ipSans := printf "ip_sans=%s" $hostIp {{ "}}" }}
+    {{ "{{" }} with pkiCert `/cloud/azure/sis-azure-stage/services/container-cache/regions/scus/getty/pki/server/01/issue/server` `common_name=container-cache.container-caching.svc.cluster.local` `private_key_format=pkcs8` $ipSans {{ "}}" }}
+      {{ "{{" }} .Cert {{ "}}" }} {{ "{{" }} .CA {{ "}}" }} {{ "{{" }} .Key {{ "}}" }}
+      {{ "{{" }} .Key | writeToFile "/vault/secrets/certs/nginx-proxy.key" "" "" "0600" {{ "}}" }}
+      {{ "{{" }} .Cert | writeToFile "/vault/secrets/nginx-proxy.pem.tmp" "" "" "0600" {{ "}}" }}
+    {{ "{{" }} end {{ "}}" }}
+    {{ "{{" }} with secret `/cloud/azure/sis-azure-stage/services/container-cache/regions/scus/getty/pki/server/01/cert/ca_chain` {{ "}}" }}
+    {{ "{{" }} .Data.ca_chain | writeToFile "/vault/secrets/certs/ca_chain.pem" "" "" "0600" {{ "}}" }}
+    {{ "{{" }} end {{ "}}" }}
