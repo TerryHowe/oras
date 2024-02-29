@@ -6,6 +6,10 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
+# Sepcify labels for selecting node.
+nodeSelector: 
+  kubernetes.io/hostname: aks-cpu-32364032-vmss000003
+
 # Number of replicas to create of Container Cache.
 replicaCount: 1
 
@@ -15,7 +19,7 @@ targetHost: stg.nvcr.io
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
-  server: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache53
+  server: nvcr.io/nvstaging/clara-internal/supare:nvcf_cache111
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
@@ -29,7 +33,7 @@ images:
 cache:
   # Size for storing cache keys (default: 10m).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
-  keyStorageSize: 10m
+  keyStorageSize: 50m
 
   # Max size of the cache (default: 80g).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
@@ -41,7 +45,7 @@ cache:
 
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  valid: 60d
+  valid: 30d
 
 # Configuration options related to how Container Cache Persistent Volume Claim is configured.
 pvc:
@@ -61,7 +65,7 @@ service:
 metrics:
   # Size for storing cache Metrics (default: 10m).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
-  cacheMetricsStorageSize: 10m
+  cacheMetricsStorageSize: 300m
 
 # Custom annotations to be added to the pod.
 podAnnotations: {}

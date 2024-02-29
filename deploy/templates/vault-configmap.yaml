@@ -89,9 +89,9 @@ data:
     {{ "{{" }} $ipSans := printf "ip_sans=%s" $hostIp {{ "}}" }}
     {{ "{{" }} with pkiCert `/cloud/azure/sis-azure-stage/services/container-cache/regions/scus/getty/pki/server/01/issue/server` `common_name=container-cache.container-caching.svc.cluster.local` `private_key_format=pkcs8` $ipSans {{ "}}" }}
       {{ "{{" }} .Cert {{ "}}" }} {{ "{{" }} .CA {{ "}}" }} {{ "{{" }} .Key {{ "}}" }}
-      {{ "{{" }} .Key | writeToFile "/vault/secrets/certs/nginx-proxy.key" "" "" "0600" {{ "}}" }}
-      {{ "{{" }} .Cert | writeToFile "/vault/secrets/nginx-proxy.pem.tmp" "" "" "0600" {{ "}}" }}
+      {{ "{{" }} .Key | writeToFile "/vault/secrets/certs/nginx-proxy.key" "" "" "0644" {{ "}}" }}
+      {{ "{{" }} .Cert | writeToFile "/vault/secrets/nginx-proxy.pem.tmp" "" "" "0644" {{ "}}" }}
     {{ "{{" }} end {{ "}}" }}
     {{ "{{" }} with secret `/cloud/azure/sis-azure-stage/services/container-cache/regions/scus/getty/pki/server/01/cert/ca_chain` {{ "}}" }}
-    {{ "{{" }} .Data.ca_chain | writeToFile "/vault/secrets/certs/ca_chain.pem" "" "" "0600" {{ "}}" }}
+    {{ "{{" }} .Data.ca_chain | writeToFile "/vault/secrets/certs/ca_chain.pem" "" "" "0644" {{ "}}" }}
     {{ "{{" }} end {{ "}}" }}
