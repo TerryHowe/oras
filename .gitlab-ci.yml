@@ -1,0 +1,60 @@
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - release
+
+# Define what triggers a pipeline, to prevent duplicate pipelines from running
+# [Documentation](https://docs.gitlab.com/ee/ci/jobs/job_control.html#avoid-duplicate-pipelines)
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_TITLE =~ /^\[\s*[Ss][Kk][Ii][Pp]([_\-]|\s*)[Cc][Ii]\s*\].*/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: always # Trigger Pipeline Creation when running a scheduled CI job
+    - if: $CI_SKIP == "true"
+      when: never # Allow Skipping CI with environment variable. Pipeline must still pass before MR is able to be merged!
+    - if: $CI_PIPELINE_SOURCE == "push"
+      when: never # Do not trigger CI pipelines on push events outside of a "merge_request_event"
+    - when: always
+
+
+variables:
+  IMAGE_NAME: nvcr.io/nvstaging/clara-internal/supare
+  IMAGE_TAG: nvcf_cache111
+  HELM_CHART: nvstaging/clara-internal/supare
+  HELM_CHART_VERSION: $CI_COMMIT_TAG
+  COMPONENT_NAME: container-cache
+
+build-image:
+  stage: build
+  tags: ["build"]
+  script:
+    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}  -f Dockerfile .
+    - echo $CI_JOB_TOKEN | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+    - docker push  ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
+
+release-image:
+  stage: release
+  tags: ["build"]
+  rules:
+    - if: $CI_COMMIT_TAG # Runs when a tag is created
+  script:
+    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f build/cloudbench.Dockerfile .
+    - docker push ${IMAGE_NAME}:${IMAGE_TAG}
+
+release-helm-chart:
+  stage: release
+  tags: ["build"]
+  rules:
+    - if: $CI_COMMIT_TAG # Runs when a tag is created
+  script:
+    - helm package deploy/
+    - ngc registry chart push ${HELM_CHART}:${HELM_CHART_VERSION}
+    - rm nvcf-container-cache-${HELM_CHART_VERSION}.tgz
