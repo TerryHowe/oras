@@ -40,7 +40,7 @@ data:
       "source" = "/vault/configs/template.hcl"
       "destination" = "/vault/secrets/secrets_pkiCert.tmp"
       "exec" {
-        "command" = "cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain.pem > /vault/secrets/certs/nginx-proxy.pem"
+        "command" = "cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain.pem > /vault/secrets/certs/nginx-proxy.pem && wget -O- http://127.0.0.1:13129/reload || echo"
       }
       error_on_missing_key = true
     }

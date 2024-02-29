@@ -97,7 +97,7 @@ RUN ./configure ${NGINX_CONFIG} &&\
 ENV PATH=/usr/local/openresty/bin:/usr/local/openresty/nginx/sbin:/usr/local/openresty/luajit/bin/:$PATH
 
 # Add needed Lua modules
-RUN opm get ledgetech/lua-resty-http && opm get knyar/nginx-lua-prometheus
+RUN opm get ledgetech/lua-resty-http=0.17.1 && opm get knyar/nginx-lua-prometheus=0.20230607
 
 # Run from the root directory (unset initial change to root directory)
 WORKDIR /
