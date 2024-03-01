@@ -3,100 +3,73 @@
 
 ### Overview
 
-This project provides a container caching solution specifically optimized for nvcr.io. It is designed to enhance the efficiency of Docker image pulls from nvcr.io by caching the images locally, reducing network bandwidth and improving pull times for frequently accessed images.
+This project provides a container caching solution specifically optimized for NGC. It is designed to enhance the efficiency of Docker image pulls from NGC by caching the images locally, reducing network bandwidth and improving pull times for frequently accessed images.
+
+### Pre-requisite
+
+1. The container image for Container Cache is stored on NGC at [nvcr.io/nvstaging/clara/nvcf-container-caching](https://registry.ngc.nvidia.com/orgs/nvstaging/teams/clara/containers/nvcf-container-caching). Make sure you have access to it.
+
+2. Kubernetes Cluster with containerd runtime. Container Cache is build for kubernetes deployment. Client nodes that need to pull images from the Cache must be using containerd runtime.
 
 ### Setup Instructions
 
-#### Kubernetes (via Microk8s)
-See [kubernetes](./kubernetes/) for a sample deployment (under construction)
+#### Server
+See [deploy](./deploy/) for container cache helm chart
 
+1. Create `container-caching` namespace
+    
+    Vault is configured to select the select the ServiceAccount in `container-caching` namespace. The helm chart needs to be deployed to this namespace for vault to allow fetching certificates for nginx. Use below command to create namespace:
 
-1. Accessing MicroK8s containerd Configuration
+    ```
+    kubectl create namespace container-caching
+    ```
 
-MicroK8s stores its containerd configuration in a different location due to its snap-based nature. The configuration file is typically located at /var/snap/microk8s/current/args/containerd-template.toml.
+2. Create image pull secret 
 
-    Edit the containerd-template.toml file:
-`sudo vi /var/snap/microk8s/current/args/containerd-template.toml`
+    Container Cache Image is present on [NGC](https://registry.ngc.nvidia.com/orgs/nvstaging/teams/clara/containers/nvcf-container-caching). 
+    Image pull secret with your NGC key must be created in the `container-caching` namespace. Below is the sample command to create secret:
+    ```
+    kubectl create secret docker-registry ngc-container-pull --docker-server=nvcr.io --docker-username='$oauthtoken' --docker-password=<your-ngc-key> -n container-caching
+    ```
 
-2. Add the registry mirror config for nvcr.io
-```toml
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."nvcr.io"]
-endpoint = ["https://container-cache:13128"]  # Replace with your Nginx proxy address
+3. Customizing the helm [values.yaml](./deploy/)
 
-```
+    Modify the values present in [values.yaml](./deploy/values.yaml) as per requirement.
 
-3. Adding a Custom SSL Certificate
+4. Deploy Helm Chart
 
-You need to add the certificate to MicroK8s’ trusted certificates.
-   Place your custom certificate (e.g., the one in `certs_dir/ca.crt`) in the MicroK8s certificates directory:
+    Use the below command to deploy helm chart
+    ```
+    helm install nvcf-container-cache-staging deploy/ -f deploy/values.yaml -n container-caching
+    ```
 
-`sudo cp /path/to/ca.crt /var/snap/microk8s/current/certs/``
+5. Verify deployment
 
-Update the certificate authority (CA) certificates:
-```bash
-sudo microk8s.refresh-certs
+    Use the below command to verify the deployment 
+    ```
+    kubectl --namespace=container-caching get pod,svc,deployment,secret,pvc --selector='app.kubernetes.io/name=nvcf-container-cache,app.kubernetes.io/instance=<helm-release-name>'   
+    ```
 
-```
-Restart MicroK8s
+#### Client
 
-```bash
-sudo microk8s.stop
-sudo microk8s.start
+See [client](./client//) for container cache daemonset
 
-```
+1. Customize [daemonset](./client/configure-containerd.yaml)
 
-#### Using Docker:
-  To start the caching proxy, run the following command:
+    The daemonset configures Container Cache deployment as an image mirror for ${TARGET_HOST} registry for all the nodes in the cluster. 
+    
+    Modify ${TARGET_HOST} to your upstream server and ${CONTAINER_CACHE_IP} to the IP of your Container Cache deployment.
 
+    Modify `nginx_proxy.crt` to the Root CA Cert with which was used to sign the Nginx SSL Cert.
 
-#### Testing the Configuration
+2. Run [configure-containerd.sh](./client/configure-containerd.sh)
+    
+    The above script deploys the daemonset, waits for it's completion and exits. Use below command to run the script:
 
-To validate the setup:
+    ```
+    ./client/configure-containerd.sh
+    ```
 
-    Pull an image from nvcr.io to see if it goes through the cache.
-    Check the logs from the cache server to verify that the requests are being routed correctly.
-
-```bash
-    # build the base image 
-    pushd base_image
-    docker build -t caching-base:latest -f Dockerfile-base . --no-cache
-    popd
-
-    # build the image
-    docker build -t cache-server:latest -f Dockerfile . --no-cache
-    docker run -d --name container-cache -p 13128:13128 container-cache
-```
-
-#### Running the Solution locally (development)
-Using Docker Compose:
-
-A docker-compose.yml file is provided for easy setup. To use it, run:
-
-```bash
-docker-compose up -d
-```
-
-
-Configuring Docker to Use the Cache
-
-```bash
-mkdir -p /etc/systemd/system/docker.service.d
-# Assuming you are running locally, change if running the cache on a different maching
-sudo vim /etc/systemd/system/docker.service.d/http-proxy.conf
-
-# Add the following to /etc/systemd/system/docker.service.d/http-proxy.conf:
-[Service]
-Environment="HTTP_PROXY=http://localhost:13128/"
-Environment="HTTPS_PROXY=http://localhost:13128/"
-
-# Once you start the server (with an initial docker-compose up)
-cat certs_dir/ca.crt > /usr/share/ca-certificates/caching.crt
-echo "caching.crt" >> /etc/ca-certificates.conf
-update-ca-certificates --fresh
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-```
-Note: Try to keep the certs_dir around, you need to run the above command every time they are generated.
 
 ### Additional Information
 

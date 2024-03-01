@@ -75,6 +75,11 @@ spec:
       initContainers:
       - name: configure
         image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+        env:
+        - name: TARGET_HOST
+          value: "stg.nvcr.io"
+        - name: CONTAINER_CACHE_IP
+          value: "https://10.0.0.15:30345"
         securityContext:
           privileged: true
         volumeMounts:
@@ -88,10 +93,10 @@ spec:
         args:
         - -c
         - |
-          mkdir -p /host/etc/containerd/certs.d/stg.nvcr.io
-          cat <<EOF >/host/etc/containerd/certs.d/stg.nvcr.io/hosts.toml
-          server = "https://stg.nvcr.io"
-          [host."https://10.0.0.15:30345"]
+          mkdir -p /host/etc/containerd/certs.d/${TARGET_HOST}
+          cat <<EOF >/host/etc/containerd/certs.d/${TARGET_HOST}/hosts.toml
+          server = "https://${TARGET_HOST}"
+          [host.${CONTAINER_CACHE_IP}]
             capabilities = ["pull", "resolve"]
             ca = "/etc/ssl/nginx_proxy_staging.crt"
           EOF
