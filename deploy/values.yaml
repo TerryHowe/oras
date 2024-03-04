@@ -19,7 +19,7 @@ targetHost: stg.nvcr.io
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
-  server: nvcr.io/nvstaging/clara/nvcf-container-caching:v0.9
+  server: nvcr.io/nvstaging/clara/nvcf-container-caching:v1.0
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0

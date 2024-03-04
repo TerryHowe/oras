@@ -38,31 +38,32 @@ data:
         # Cache Metrics
         init_worker_by_lua_block {
             prometheus = require("prometheus").init("cache_metrics")
-            cache_hit_responses = prometheus:counter(
-                "nginx_cache_hit_responses", "Total number of cache hits", {"request_uri", "body_size_bytes", "total_size_bytes"})
 
-            cache_miss_responses = prometheus:counter(
-                "nginx_cache_miss_responses", "Total number of cache misses", {"request_uri", "body_size_bytes", "total_size_bytes"})
+            http_request_time_ms_total = prometheus:counter(
+                "nginx_http_requests_time_ms_total", "Sum of time elapsed between reading the first bytes from the client and writing a log entry after the last bytes were sent for each request", {"request_uri", "cache_status", "client_ip", "http_status"})
 
-            http_request_time_ms = prometheus:histogram("nginx_http_request_time_milliseconds", "Time elapsed between reading the first bytes from the client and writing a log entry after the last bytes were sent.", {"request_uri", "cache_status"})
+            http_requests_count = prometheus:counter(
+                "nginx_http_requests_count", "Count of requests with additional labels", {"request_uri", "cache_status", "client_ip", "http_status"})
+
+            response_body_size = prometheus:gauge(
+                "nginx_response_body_size_bytes", "Number of bytes sent to client, not counting the response header", {"request_uri", "cache_status", "client_ip", "http_status"})
         }
 
         log_by_lua_block {
             local cache_status = ngx.var.upstream_cache_status 
             local request_uri = ngx.var.request_uri
             local body_size = ngx.var.body_bytes_sent
-            local total_size = ngx.var.bytes_sent
-            local upstream_response_time = ngx.var.upstream_response_time
+            local remote_addr = ngx.var.remote_addr
             local request_time = ngx.var.request_time
-            if request_uri ~= nil and not string.find(request_uri, "manifest") then
-                if cache_status == "HIT" then
-                    cache_hit_responses:inc(1, {request_uri, body_size, total_size})
-                    http_request_time_ms:observe(tonumber(request_time), {request_uri, cache_status})
-                elseif cache_status == "MISS" then
-                    cache_miss_responses:inc(1, {request_uri, body_size, total_size})
-                    http_request_time_ms:observe(tonumber(request_time), {request_uri, cache_status})
-                else
-                    print(cache_status)
+            local http_status = ngx.var.status
+            if request_uri ~= nil and cache_status ~= nil and remote_addr ~= nil and not string.find(request_uri, "manifest") then
+                if request_time ~= nil then
+                    http_request_time_ms_total:inc(tonumber(request_time), {request_uri, cache_status, remote_addr, http_status})
+                    http_requests_count:inc(1, {request_uri, cache_status, remote_addr, http_status})
+                end
+
+                if body_size ~= nil then
+                    response_body_size:set(tonumber(body_size), {request_uri, cache_status, remote_addr, http_status})
                 end
             end
         }

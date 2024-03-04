@@ -96,7 +96,7 @@ spec:
           mkdir -p /host/etc/containerd/certs.d/${TARGET_HOST}
           cat <<EOF >/host/etc/containerd/certs.d/${TARGET_HOST}/hosts.toml
           server = "https://${TARGET_HOST}"
-          [host.${CONTAINER_CACHE_IP}]
+          [host."${CONTAINER_CACHE_IP}"]
             capabilities = ["pull", "resolve"]
             ca = "/etc/ssl/nginx_proxy_staging.crt"
           EOF
