@@ -21,5 +21,5 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: "/container_cache"
-  
+    path: "/container_cache_nvcr"
+  storageClassName: {{ $.Values.pvc.storageClassName | default "azurefile" | quote }}

@@ -20,3 +20,4 @@ spec:
   resources:
     requests:
       storage: {{ $.Values.pvc.size | default "100Gi" | quote }}
+  storageClassName: {{ $.Values.pvc.storageClassName | default "azurefile" | quote }}

@@ -52,6 +52,9 @@ pvc:
   # Size of persistent volume claim (default: 100Gi )
   size: 200Gi
 
+  # Name of storage class for persistent volume claim (default: azurefile )
+  storageClassName: azurefile
+
 # Configuration options related to how Container Cache Service is configured.
 service:
   # Type of Kubernetes service connection used by the server to provide network API services (default: ClusterIP).
@@ -72,3 +75,20 @@ podAnnotations: {}
 
 # Custom labels to be added to the pod.
 podLabels: {}
+
+# Vault configuration.
+vault:
+  # Cluster Cloud Service Provider (default: azure).
+  clusterCSP: azure
+
+  # Cluster Region (default: scus).
+  clusterRegion: scus
+
+  # Cluster Account Name (default: sis-azure-stage).
+  clusterAccountName: sis-azure-stage
+
+  # Cluster Name (default: stage).
+  clusterName: getty
+
+  # Vault Address (default: https://stg.vault.nvidia.com:443).
+  vaultAddress: https://stg.vault.nvidia.com:443
