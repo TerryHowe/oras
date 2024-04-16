@@ -7,7 +7,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ $.Release.Name }}
   namespace: {{ $.Release.Namespace | quote }}
@@ -50,7 +50,7 @@ spec:
         name: init-chown-data
         resources: {}
         volumeMounts:
-        - name: container-cache
+        - name: cache
           mountPath: /container_cache
         securityContext:
           capabilities:
@@ -91,7 +91,7 @@ spec:
               path: /healthz
               port: http
           volumeMounts:
-            - name: container-cache
+            - name: cache
               mountPath: /container_cache
             - name: nginx-config
               mountPath: /etc/nginx/nginx.conf
@@ -113,9 +113,18 @@ spec:
             - serviceAccountToken:
                 path: token
                 audience: https://stg.vault.nvidia.com
-        - name: container-cache
-          persistentVolumeClaim:
-            claimName: {{ $.Release.Name }}-pvc
         - name: nginx-config
           configMap: 
             name: {{ $.Release.Name }}-config
+  volumeClaimTemplates:
+    - metadata:
+        name: cache
+        namespace: {{ $.Release.Namespace | quote }}
+        labels:
+          app: {{ $.Release.Name }}
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ $.Values.persistentVolume.pvcSize | default "100Gi" | quote }}
+        storageClassName: {{ $.Values.persistentVolume.storageClassName | default "azurefile" | quote }}

@@ -47,9 +47,9 @@ cache:
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   valid: 30d
 
-# Configuration options related to how Container Cache Persistent Volume Claim is configured.
-pvc:
-  # Size of persistent volume claim (default: 100Gi )
+# Configuration options related to how Container Cache Persistent Volume is configured.
+persistentVolumeClaim:
+  # Size of persistent volume (default: 100Gi )
   size: 200Gi
 
   # Name of storage class for persistent volume claim (default: azurefile )
