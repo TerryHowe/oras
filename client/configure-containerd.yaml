@@ -98,7 +98,7 @@ spec:
           server = "https://${TARGET_HOST}"
           [host."${CONTAINER_CACHE_IP}"]
             capabilities = ["pull", "resolve"]
-            ca = "/etc/ssl/nginx_proxy_staging.crt"
+            ca = "/etc/ssl/nginx_container_cache.crt"
           EOF
           cp /host/nginx_proxy.crt /host/etc/ssl/nginx_proxy_staging.crt
       containers:

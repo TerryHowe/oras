@@ -40,13 +40,16 @@ data:
             prometheus = require("prometheus").init("cache_metrics")
 
             http_request_time_ms_total = prometheus:counter(
-                "nginx_http_requests_time_ms_total", "Sum of time elapsed between reading the first bytes from the client and writing a log entry after the last bytes were sent for each request", {"request_uri", "cache_status", "client_ip", "http_status"})
+                "container_cache_http_requests_time_ms_total", "Sum of time elapsed between reading the first bytes from the client and writing a log entry after the last bytes were sent for each request", {"request_uri", "cache_status", "client_ip", "http_status"})
 
             http_requests_count = prometheus:counter(
-                "nginx_http_requests_count", "Count of requests with additional labels", {"request_uri", "cache_status", "client_ip", "http_status"})
+                "container_cache_http_requests_count", "Count of requests with additional labels", {"request_uri", "cache_status", "client_ip", "http_status"})
 
             response_body_size = prometheus:gauge(
-                "nginx_response_body_size_bytes", "Number of bytes sent to client, not counting the response header", {"request_uri", "cache_status", "client_ip", "http_status"})
+                "container_cache_response_body_size_bytes", "Number of bytes sent to client, not counting the response header", {"request_uri", "cache_status", "client_ip", "http_status"})
+            
+            cache_throughput = prometheus:histogram(
+                "container_cache_throughput", "Throughput of container cache(bytes/msec)", {"cache_status", "http_status"})
         }
 
         log_by_lua_block {
@@ -60,6 +63,10 @@ data:
                 if request_time ~= nil then
                     http_request_time_ms_total:inc(tonumber(request_time), {request_uri, cache_status, remote_addr, http_status})
                     http_requests_count:inc(1, {request_uri, cache_status, remote_addr, http_status})
+
+                    if body_size ~= nil then
+                        cache_throughput:observe(tonumber(body_size) / tonumber(request_time), {cache_status, http_status})
+                    end
                 end
 
                 if body_size ~= nil then

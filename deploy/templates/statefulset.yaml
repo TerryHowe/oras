@@ -16,12 +16,15 @@ metadata:
     {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  updateStrategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       {{- include "nvcf-container-cache.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/agent-init-first: "true"
         vault.hashicorp.com/agent-inject-status: update
@@ -126,5 +129,5 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: {{ $.Values.persistentVolume.pvcSize | default "100Gi" | quote }}
-        storageClassName: {{ $.Values.persistentVolume.storageClassName | default "azurefile" | quote }}
+            storage: {{ $.Values.persistentVolumeClaim.size | default "100Gi" | quote }}
+        storageClassName: {{ $.Values.persistentVolumeClaim.storageClassName | default "azurefile" | quote }}
