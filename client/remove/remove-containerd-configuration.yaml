@@ -1,0 +1,48 @@
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: remove-containerd-configuration
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: remove-containerd-configuration
+  template:
+    metadata:
+      labels:
+        name: remove-containerd-configuration
+    spec:
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      initContainers:
+      - name: remove-configuration
+        image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+        env:
+        - name: TARGET_HOST
+          value: "stg.nvcr.io"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: etc-containerd
+          mountPath: /host/etc/containerd
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          rm -rf /host/etc/containerd/certs.d/${TARGET_HOST}
+      containers:
+      - name: pause
+        image: gcr.io/google_containers/pause
+      volumes:
+      - name: etc-containerd
+        hostPath:
+          path: /etc/containerd

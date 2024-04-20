@@ -52,6 +52,7 @@ See [deploy](./deploy/) for container cache helm chart
 
 #### Client
 
+##### Configure Containerd using Daemonset
 See [client](./client//) for container cache daemonset
 
 1. Customize [daemonset](./client/configure-containerd.yaml)
@@ -64,12 +65,28 @@ See [client](./client//) for container cache daemonset
 
 2. Run [configure-containerd.sh](./client/configure-containerd.sh)
     
-    The above script deploys the daemonset, waits for it's completion and exits. Use below command to run the script:
+    The above script deploys the daemonset that adds containerd configuration for Container Cache, waits for it's completion and exits. Use below command to run the script:
 
     ```
     ./client/configure-containerd.sh
     ```
 
+##### Remove Containerd Configuration using Daemonset
+See [client](./client/remove/) for container cache configuration removal daemonset
+
+1. Customize [daemonset](./client/remove/remove-containerd-configuration.sh)
+
+    The daemonset removes Containerd configuration done for Container Cache for all the nodes in the cluster. 
+    
+    Modify ${TARGET_HOST} to your upstream server.
+
+2. Run [remove-containerd-configuration.sh](./client/remove/remove-containerd-configuration.sh)
+    
+    The above script deploys the daemonset that removes containerd configuration, waits for it's completion and exits. Use below command to run the script:
+
+    ```
+    ./client/remove/remove-containerd-configuration.sh
+    ```
 
 ### Additional Information
 

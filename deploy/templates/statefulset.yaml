@@ -123,8 +123,6 @@ spec:
     - metadata:
         name: cache
         namespace: {{ $.Release.Namespace | quote }}
-        labels:
-          app: {{ $.Release.Name }}
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
