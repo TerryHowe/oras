@@ -13,7 +13,6 @@ This project provides a container caching solution specifically optimized for NG
 
 ### Setup Instructions
 
-#### Server
 See [deploy](./deploy/) for container cache helm chart
 
 1. Create `container-caching` namespace
@@ -26,7 +25,7 @@ See [deploy](./deploy/) for container cache helm chart
 
 2. Create image pull secret 
 
-    Container Cache Image is present on [NGC](https://registry.ngc.nvidia.com/orgs/nvstaging/teams/clara/containers/nvcf-container-caching). 
+    Container Cache Image is present on [NGC](https://registry.ngc.nvidia.com/orgs/qtfpt1h0bieu/teams/nvcf-core/containers/nvcf-container-cache/tags). 
     Image pull secret with your NGC key must be created in the `container-caching` namespace. Below is the sample command to create secret:
     ```
     kubectl create secret docker-registry ngc-container-pull --docker-server=nvcr.io --docker-username='$oauthtoken' --docker-password=<your-ngc-key> -n container-caching
@@ -34,7 +33,7 @@ See [deploy](./deploy/) for container cache helm chart
 
 3. Customizing the helm [values.yaml](./deploy/)
 
-    Modify the values present in [values.yaml](./deploy/values.yaml) as per requirement.
+    Modify the values present in [values.yaml](./deploy/values-azure-stage.yaml) as per requirement.
 
 4. Deploy Helm Chart
 
@@ -47,28 +46,32 @@ See [deploy](./deploy/) for container cache helm chart
 
     Use the below command to verify the deployment 
     ```
-    kubectl --namespace=container-caching get pod,svc,deployment,secret,pvc --selector='app.kubernetes.io/name=nvcf-container-cache,app.kubernetes.io/instance=<helm-release-name>'   
+    kubectl --namespace=container-caching get pod,daemonset,svc,deployment,secret,pvc --selector='app.kubernetes.io/name=nvcf-container-cache,app.kubernetes.io/instance=<helm-release-name>'
+
+    NAME                                     READY   STATUS    RESTARTS   AGE
+    pod/nvcf-container-cache-nvmesh-nvcr-0   3/3     Running   0          10s
+
+    NAME                                                 DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+    daemonset.apps/nvcf-container-cache-nvmesh-nvcr-cc   12        12        12      12           12          <none>          11s
+
+    NAME                                       TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)           AGE
+    service/nvcf-container-cache-nvmesh-nvcr   NodePort   100.68.193.167   <none>        30345:30345/TCP   11s
+
+    NAME                                                READY   AGE
+    statefulset.apps/nvcf-container-cache-nvmesh-nvcr   1/1     12s
+
+    NAME                                                             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    persistentvolumeclaim/cache-nvcf-container-cache-nvmesh-nvcr-0   Bound    pvc-e4c36637-dee5-49b5-8267-9b37cf38409a   20Gi       RWO            nvcf-cc-sc      39h   
     ```
 
-#### Client
+6. The Helm Chart includes a [daemonset](./deploy/templates/daemonset.yaml) that does containerd configuration on each node. The pods spawned by daemonset remain in `Running` state. As nodes are created, new pod gets spawned to make containerd configuration.
 
-##### Configure Containerd using Daemonset
-See [client](./client//) for container cache daemonset
+### Uninstall Instructions
 
-1. Customize [daemonset](./client/configure-containerd.yaml)
-
-    The daemonset configures Container Cache deployment as an image mirror for ${TARGET_HOST} registry for all the nodes in the cluster. 
-    
-    Modify ${TARGET_HOST} to your upstream server and ${CONTAINER_CACHE_IP} to the IP of your Container Cache deployment.
-
-    Modify `nginx_proxy.crt` to the Root CA Cert with which was used to sign the Nginx SSL Cert.
-
-2. Run [configure-containerd.sh](./client/configure-containerd.sh)
-    
-    The above script deploys the daemonset that adds containerd configuration for Container Cache, waits for it's completion and exits. Use below command to run the script:
+1. Uninstall Helm Chart
 
     ```
-    ./client/configure-containerd.sh
+    helm uninstall nvcf-container-cache-nvmesh-nvcr -n container-caching
     ```
 
 ##### Remove Containerd Configuration using Daemonset

@@ -28,7 +28,7 @@ spec:
         image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
         env:
         - name: TARGET_HOST
-          value: "stg.nvcr.io"
+          value: "nvcr.io"
         securityContext:
           privileged: true
         volumeMounts:

@@ -85,9 +85,7 @@ data:
     }
 
   template.hcl: |
-    {{ "{{" }} $hostIp := env "HOST_IP" {{ "}}" }}
-    {{ "{{" }} $ipSans := printf "ip_sans=%s" $hostIp {{ "}}" }}
-    {{ "{{" }} with pkiCert `/cloud/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/services/container-cache/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}/pki/server/01/issue/server` `common_name=container-cache.container-caching.svc.cluster.local` `private_key_format=pkcs8` $ipSans {{ "}}" }}
+    {{ "{{" }} with pkiCert `/cloud/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/services/container-cache/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}/pki/server/01/issue/server` `common_name=container-cache.container-caching.svc.cluster.local` `private_key_format=pkcs8` `ip_sans={{ .Values.vault.hostIP }}` {{ "}}" }}
       {{ "{{" }} .Cert {{ "}}" }} {{ "{{" }} .CA {{ "}}" }} {{ "{{" }} .Key {{ "}}" }}
       {{ "{{" }} .Key | writeToFile "/vault/secrets/certs/nginx-proxy.key" "" "" "0644" {{ "}}" }}
       {{ "{{" }} .Cert | writeToFile "/vault/secrets/nginx-proxy.pem.tmp" "" "" "0644" {{ "}}" }}

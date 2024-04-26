@@ -1,0 +1,82 @@
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-cm
+  namespace: {{ $.Release.Namespace | quote }}
+  labels:
+    app: {{ $.Release.Name }}
+    {{- include "nvcf-container-cache.labels" . | nindent 4 }}
+data:
+  # The nginx_proxy.crt file is the root certificate for the NVCF Staging environment.
+  # You can get this by `curl http://crls-stg.vpki.nvidia.com/his3/mtk3n2i5ntk2ytjm/ca/pem`.
+  # This should change based on the environment you are using.
+  nginx_container_cache.crt: {{ $.Values.nvcfRootCert | quote }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ $.Release.Name }}-cc
+  namespace: {{ $.Release.Namespace | quote }}
+  labels:
+    app: {{ $.Release.Name }}
+    {{- include "nvcf-container-cache.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      name: configure-containerd
+  template:
+    metadata:
+      labels:
+        name: configure-containerd
+    spec:
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      containers:
+      - name: configure
+        image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+        env:
+        - name: TARGET_HOST
+          value: {{ $.Values.targetHost | default "nvcr.io" | quote }}
+        - name: CONTAINER_CACHE_IP
+          value: "https://{{ $.Values.vault.hostIP }}:{{ $.Values.service.port }}"
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: etc-containerd
+          mountPath: /host/etc/containerd
+        - name: ssl-configmap
+          mountPath: /host/
+        - name: ssl-certs
+          mountPath: /host/etc/ssl/
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          mkdir -p /host/etc/containerd/certs.d/${TARGET_HOST}
+          cat <<EOF >/host/etc/containerd/certs.d/${TARGET_HOST}/hosts.toml
+          server = "https://${TARGET_HOST}"
+          [host."${CONTAINER_CACHE_IP}"]
+            capabilities = ["pull", "resolve"]
+            ca = "/etc/ssl/nginx_container_cache.crt"
+          EOF
+          cp /host/nginx_container_cache.crt /host/etc/ssl/nginx_container_cache.crt
+          while true; do sleep 1000; done
+      volumes:
+      - name: etc-containerd
+        hostPath:
+          path: /etc/containerd
+      - name: ssl-configmap
+        configMap:
+          name: {{ $.Release.Name }}-cm
+      - name: ssl-certs
+        hostPath:
+          path: /etc/ssl

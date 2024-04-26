@@ -9,4 +9,4 @@ Helpful commands:
 
   $ helm --namespace={{ $.Release.Namespace }} status {{ $.Release.Name }}
   $ helm --namespace={{ $.Release.Namespace }} get all {{ $.Release.Name }}
-  $ kubectl --namespace={{ $.Release.Namespace }} get pod,svc,statefulset,secret,pvc --selector='app.kubernetes.io/name={{ $.Chart.Name }},app.kubernetes.io/instance={{ $.Release.Name }}'
+  $ kubectl --namespace={{ $.Release.Namespace }} get pod,daemonset,svc,statefulset,secret,pvc --selector='app.kubernetes.io/name={{ $.Chart.Name }},app.kubernetes.io/instance={{ $.Release.Name }}'

@@ -49,7 +49,7 @@ data:
                 "container_cache_response_body_size_bytes", "Number of bytes sent to client, not counting the response header", {"request_uri", "cache_status", "client_ip", "http_status"})
             
             cache_throughput = prometheus:histogram(
-                "container_cache_throughput", "Throughput of container cache(bytes/msec)", {"cache_status", "http_status"})
+                "container_cache_throughput", "Throughput of container cache(bytes/msec)", {"cache_status", "http_status"}, { {{ $.Values.metrics.throughputHistogramBuckets | default "25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000" }} })
         }
 
         log_by_lua_block {

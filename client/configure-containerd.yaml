@@ -15,7 +15,7 @@ data:
   # The nginx_proxy.crt file is the root certificate for the NVCF Staging environment.
   # You can get this by `curl http://crls-stg.vpki.nvidia.com/his3/mtk3n2i5ntk2ytjm/ca/pem`.
   # This should change based on the environment you are using.
-  nginx_proxy.crt: |
+  nginx_container_cache.crt: |
     -----BEGIN CERTIFICATE-----
     MIIGpTCCBI2gAwIBAgIUWoUMzmHB4HpEgAZ5DvsoLVWgnP4wDQYJKoZIhvcNAQEL
     BQAwgYYxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRQwEgYDVQQH
@@ -72,14 +72,14 @@ spec:
       hostPID: true
       hostIPC: true
       hostNetwork: true
-      initContainers:
+      containers:
       - name: configure
         image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
         env:
         - name: TARGET_HOST
-          value: "stg.nvcr.io"
+          value: "nvcr.io"
         - name: CONTAINER_CACHE_IP
-          value: "https://10.0.0.15:30345"
+          value: "https://10.0.0.4:30345"
         securityContext:
           privileged: true
         volumeMounts:
@@ -100,10 +100,8 @@ spec:
             capabilities = ["pull", "resolve"]
             ca = "/etc/ssl/nginx_container_cache.crt"
           EOF
-          cp /host/nginx_proxy.crt /host/etc/ssl/nginx_proxy_staging.crt
-      containers:
-      - name: pause
-        image: gcr.io/google_containers/pause
+          cp /host/nginx_container_cache.crt /host/etc/ssl/nginx_container_cache.crt
+          while true; do sleep 1000; done
       volumes:
       - name: etc-containerd
         hostPath:
