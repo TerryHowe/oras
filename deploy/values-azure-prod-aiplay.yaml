@@ -8,6 +8,7 @@
 
 # Sepcify labels for selecting node.
 nodeSelector: 
+  node.kubernetes.io/instance-type: Standard_D64s_v3
 
 # Number of replicas to create of Container Cache.
 replicaCount: 2
@@ -21,12 +22,12 @@ images:
   server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
 
   # Name of the container image containing Nginx Prometheus Exporter.
-  exporter: nginx/nginx-prometheus-exporter:1.0
+  exporter: nvcr.io/qtfpt1h0bieu/nvcf-core/nginx-prometheus-exporter:1.0
 
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
     # The name of the Kubernetes secret to be used (NOT the secret itself).
-    - ngc-container-pull
+    - nvcr-regcred
 
 # Configuration options related to how Container Cache is configured.
 cache:
@@ -91,14 +92,14 @@ vault:
   clusterAccountName: sis-azure-prod
 
   # Cluster Name (default: stage).
-  clusterName: azure-picasso
+  clusterName: aiplay
 
   # Vault Address (default: https://stg.vault.nvidia.com:443).
-  vaultAddress: https://prod.vault.nvidia.com:443
+  vaultAddress: https://prod.vault.nvidia.com
 
   # Node IP address of any node in the cluster.
   # This must be used in the client daemonset in the CONTAINER_CACHE_IP environment variable in the form "https://<vault.hostIP>:<service.Port>".
-  hostIP: 10.0.0.4
+  hostIP: 10.1.0.7
 
 nvcfRootCert: |
   -----BEGIN CERTIFICATE-----

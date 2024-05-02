@@ -115,7 +115,7 @@ spec:
             sources:
             - serviceAccountToken:
                 path: token
-                audience: https://stg.vault.nvidia.com
+                audience: {{ .Values.vault.vaultAddress }}
         - name: nginx-config
           configMap: 
             name: {{ $.Release.Name }}-config
