@@ -20,17 +20,10 @@ COPY . .
 
 # build our go executable
 RUN go build
-ADD secrets.json /vault/secrets.json
-RUN mkdir -p /certs
-RUN touch /home/nohup.out
+
 FROM $IMG:$TAG
 
 # Copy the go executable into our final container
 COPY --from=builder /app/cert-watcher /app/cert-watcher
-COPY --from=builder /vault/secrets.json /vault/secrets.json
-COPY --chown=nvs:nvs --from=builder /certs /certs
-COPY --chown=nvs:nvs --from=builder /home/nohup.out /home/nohup.out
 
-
-# CMD ["/app/cert-watcher"]
-ENTRYPOINT [ "/busybox/sh" ]
+CMD ["/app/cert-watcher"]

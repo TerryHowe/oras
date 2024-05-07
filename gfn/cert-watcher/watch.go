@@ -65,7 +65,7 @@ func main() {
 	watch(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
 }
 
-// export cert at least every 15 minutes, or when the secrets file has an update
+// This function checks for updates to secretsPath file every pollingUpdateDuration or when the secrets file has an update, it exports the updated certs and reloads nginx
 func watch(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -118,6 +118,7 @@ func watch(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOu
 	}
 }
 
+// exportAndReload exports the cert and key from the secrets file and reloads nginx
 func exportAndReload(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) error {
 	err := exportCert(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
 	if err != nil {
@@ -134,6 +135,7 @@ func exportAndReload(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Ex
 	return err
 }
 
+// setLastModTime sets the lastModTime to the last modified time of the file at filePath
 func setLastModTime(filePath string) error {
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
@@ -144,6 +146,7 @@ func setLastModTime(filePath string) error {
 	return nil
 }
 
+// checkFileUpdated checks if the file at filePath has been updated since the last check
 func checkFileUpdated(filePath string) bool {
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
@@ -160,6 +163,7 @@ func checkFileUpdated(filePath string) bool {
 	return false
 }
 
+// reloadNginx sends a request to the nginx reload endpoint and returns true if the request was successful
 func reloadNginx() bool {
 	resp, err := http.Get(nginxReloadEndpoint)
 	if err != nil {
@@ -169,6 +173,7 @@ func reloadNginx() bool {
 	return resp.StatusCode == http.StatusOK
 }
 
+// exportCert reads the cert and key from the secrets file and writes them to the certOutputPath and keyOutputPath respectively
 func exportCert(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) error {
 	log.Println("exporting cert")
 	cert, key, err := readDataFromSecretsFile(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
@@ -202,6 +207,7 @@ func replaceCertBundle(dataBytes []byte, outputPath string) error {
 	return os.Rename(tempFile.Name(), outputPath)
 }
 
+// readDataFromSecretsFile reads the cert and key from the secrets file and returns them as strings
 func readDataFromSecretsFile(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) (string, string, error) {
 	secretsJsonFile, err := os.Open(secretsPath)
 	if err != nil {
@@ -231,6 +237,7 @@ func readDataFromSecretsFile(secretsPath string, certJsonExpr jp.Expr, keyJsonEx
 	return "", "", fmt.Errorf("no cert data found")
 }
 
+// getEnv returns the value of the environment variable at path or defaultValue if the environment variable is not set
 func getEnv(path, defaultValue string) string {
 	value := os.Getenv(path)
 	if value == "" {
