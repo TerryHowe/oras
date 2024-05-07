@@ -36,26 +36,27 @@ build-image:
   stage: build
   tags: ["build"]
   script:
+    - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
     - docker build -t ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}  -f Dockerfile .
     - echo $CI_JOB_TOKEN | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
     - docker push  ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
 
-release-image:
+release-nginx-image:
   stage: release
   tags: ["build"]
   rules:
     - if: $CI_COMMIT_TAG # Runs when a tag is created
   script:
-    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
     - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
+    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
     - docker push ${IMAGE_NAME}:${IMAGE_TAG}
 
-release-helm-chart:
+release-cert-update:
   stage: release
   tags: ["build"]
   rules:
     - if: $CI_COMMIT_TAG # Runs when a tag is created
   script:
-    - helm package deploy/
-    - ngc registry chart push ${HELM_CHART}:${HELM_CHART_VERSION}
-    - rm nvcf-container-cache-${HELM_CHART_VERSION}.tgz
+    - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
+    - docker build -t nvcr.io/nvidian/kaze/container-cache-cert-watcher:1.0 -f gfn/cert-watcher/Dockerfile .
+    - docker push ${IMAGE_NAME}:${IMAGE_TAG}

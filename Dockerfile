@@ -1,8 +1,16 @@
+# Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
 # Use ARGs to define versions
 ARG OPENRESTY_VERSION=openresty-1.21.4.3
 
 #Use specific version of ubuntu
-FROM ubuntu:jammy as builder
+FROM nvcr.io/nvstaging/clara/ubuntu-jammy-amd64:current as builder
 
 # Re-define ARGs inside the build stage
 ARG OPENRESTY_VERSION
@@ -25,7 +33,7 @@ RUN useradd \
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y \
-        build-essential \
+    build-essential \
         curl \
         libpcre3 \
         libpcre3-dev \
