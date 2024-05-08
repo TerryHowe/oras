@@ -26,8 +26,10 @@ workflow:
 
 
 variables:
-  IMAGE_NAME: nvcr.io/nvidian/kaze/container-cache
-  IMAGE_TAG: 1.0
+  NGINX_IMAGE_NAME: nvcr.io/nvidian/kaze/container-cache
+  NGINX_IMAGE_TAG: 1.0
+  CERT_WATCHER_IMAGE_NAME: nvcr.io/nvidian/kaze/container-cache
+  CERT_WATCHER_IMAGE_TAG: 1.0
   HELM_CHART: nvstaging/clara-internal/supare
   HELM_CHART_VERSION: $CI_COMMIT_TAG
   COMPONENT_NAME: container-cache
@@ -37,10 +39,12 @@ build-image:
   tags: ["build"]
   script:
     - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
-    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}  -f Dockerfile .
     - echo $CI_JOB_TOKEN | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
-    - docker push  ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}
-
+    - docker build -t ${CI_REGISTRY_IMAGE}/nginx:${CI_PIPELINE_ID}  -f Dockerfile .
+    - docker push  ${CI_REGISTRY_IMAGE}/nginx:${CI_PIPELINE_ID}
+    - cd gfn/cert-watcher
+    - docker build -t ${CI_REGISTRY_IMAGE}/cert-watcher:${CI_PIPELINE_ID} -f Dockerfile .
+    - docker push ${CI_REGISTRY_IMAGE}/cert-watcher:${CI_PIPELINE_ID}
 release-nginx-image:
   stage: release
   tags: ["build"]
@@ -48,8 +52,8 @@ release-nginx-image:
     - if: $CI_COMMIT_TAG # Runs when a tag is created
   script:
     - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
-    - docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile .
-    - docker push ${IMAGE_NAME}:${IMAGE_TAG}
+    - docker build -t ${NGINX_IMAGE_NAME}:${NGINX_IMAGE_TAG} -f Dockerfile .
+    - docker push ${NGINX_IMAGE_NAME}:${NGINX_IMAGE_TAG}
 
 release-cert-update:
   stage: release
@@ -57,6 +61,7 @@ release-cert-update:
   rules:
     - if: $CI_COMMIT_TAG # Runs when a tag is created
   script:
+    - cd gfn/cert-watcher
     - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
-    - docker build -t nvcr.io/nvidian/kaze/container-cache-cert-watcher:1.0 -f gfn/cert-watcher/Dockerfile .
-    - docker push ${IMAGE_NAME}:${IMAGE_TAG}
+    - docker build -t ${CERT_WATCHER_IMAGE_NAME}:${CERT_WATCHER_IMAGE_TAG} -f Dockerfile .
+    - docker push ${CERT_WATCHER_IMAGE_NAME}:${CERT_WATCHER_IMAGE_TAG}
