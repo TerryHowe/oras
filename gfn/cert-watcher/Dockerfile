@@ -6,7 +6,7 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
-ARG TAG=v3.0.6-dev
+ARG TAG=v3.0.6
 ARG IMG=nvcr.io/nvidian/distroless/go
 FROM golang:1.19 as builder
 

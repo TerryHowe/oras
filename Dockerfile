@@ -34,17 +34,17 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y \
     build-essential \
-        curl \
-        libpcre3 \
-        libpcre3-dev \
-        libcrypt1 \
-        libgcc1 \
-        libssl-dev \
-        libz1 \
-        openssl \
-        wget \
-        zlib1g \
-        zlib1g-dev       
+    curl \
+    libpcre3 \
+    libpcre3-dev \
+    libcrypt1 \
+    libgcc1 \
+    libssl-dev \
+    libz1 \
+    openssl \
+    wget \
+    zlib1g \
+    zlib1g-dev       
 
 # Create the cache directory and CA directories
 RUN mkdir -p /container_cache /var/cache/nginx && touch /var/run/nginx.pid
@@ -138,7 +138,5 @@ VOLUME /container_cache
 
 # Set PATH for openresty
 ENV PATH=/usr/local/openresty/bin:/usr/local/openresty/nginx/sbin:/usr/local/openresty/luajit/bin:$PATH
-
-USER nvs:nvs
 
 CMD ["nginx", "-g", "daemon off;"]
