@@ -12,6 +12,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -35,11 +36,17 @@ const (
 var lastModTime time.Time
 
 func main() {
-	certJsonPath := getEnv("CERT_PATH", `$.pki['container-cache'].ca_chain[*]`)
+	certJsonPath := getEnv("CERT_PATH", `$.pki['container-cache'].certificate`)
+	caChainJsonPath := getEnv("CA_CHAIN_PATH", `$.pki['container-cache'].ca_chain[*]`)
 	keyJsonPath := getEnv("KEY_PATH", `$.pki['container-cache'].private_key`)
 	certOutputPath := getEnv("CERT_OUTPUT_FILE", "/certs/nginx-proxy.pem")
 	keyOutputPath := getEnv("KEY_OUTPUT_FILE", "/certs/nginx-proxy.key")
 	secretsPath := getEnv("SECRETS_FILE", "/vault/secrets.json")
+
+	caChainJsonExpr, err := jp.ParseString(certJsonPath)
+	if err != nil {
+		log.Fatal("failed to parse CA_CHAIN_PATH's jsonPath value", caChainJsonPath, err)
+	}
 
 	certJsonExpr, err := jp.ParseString(certJsonPath)
 	if err != nil {
@@ -49,24 +56,19 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to parse KEY_PATH's jsonPath value", keyJsonPath, err)
 	}
-	// rotate cert on boot
-	err = exportCert(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
-	if err != nil {
-		log.Fatal(exportCertErr, err)
-	}
 
-	// set last mod time for maual checks on updates
-	err = setLastModTime(secretsPath)
-	if err != nil {
-		log.Fatal("Error while getting file info:", err)
+	// export cert and reload nginx
+	err = exportAndReload(secretsPath, certJsonExpr, caChainJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
+	if err == nil {
+		log.Println("Cert has been exported and nginx has been reloaded successfully")
 	}
 
 	// start watching for updates, does not return
-	watch(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
+	watch(secretsPath, certJsonExpr, caChainJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
 }
 
 // This function checks for updates to secretsPath file every pollingUpdateDuration or when the secrets file has an update, it exports the updated certs and reloads nginx
-func watch(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) {
+func watch(secretsPath string, certJsonExpr jp.Expr, caChainJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -83,6 +85,7 @@ func watch(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOu
 
 	for {
 		select {
+		// watch for events
 		case event, ok := <-watcher.Events:
 			if !ok {
 				return
@@ -92,26 +95,28 @@ func watch(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOu
 				log.Println("skipping remove event since secrets file may not be there")
 				continue
 			}
-			err = exportCert(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
-			if err != nil {
-				log.Println(exportCertErr, err)
+			log.Println("File has been updated")
+			// export cert and reload nginx
+			err = exportAndReload(secretsPath, certJsonExpr, caChainJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
+			if err == nil {
+				log.Println("Cert has been exported and nginx has been reloaded successfully")
 			}
-			err = setLastModTime(secretsPath)
-			if err != nil {
-				log.Fatal("Error while getting file info:", err)
-			}
+		// watch for errors
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
 			log.Println("error:", err)
+		// check for updates every pollingUpdateDuration
 		case <-ticker.C:
 			log.Println("polling based refresh triggered")
+			// check if file has been updated
 			if checkFileUpdated(secretsPath) {
 				log.Println("File has been updated")
-				err = exportAndReload(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
+				// export cert and reload nginx
+				err = exportAndReload(secretsPath, certJsonExpr, caChainJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
 				if err == nil {
-					log.Println("Cert has been exported and ngin has been reloaded successfully")
+					log.Println("Cert has been exported and nginx has been reloaded successfully")
 				}
 			}
 		}
@@ -119,18 +124,21 @@ func watch(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOu
 }
 
 // exportAndReload exports the cert and key from the secrets file and reloads nginx
-func exportAndReload(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) error {
-	err := exportCert(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
+func exportAndReload(secretsPath string, certJsonExpr jp.Expr, caChainJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) error {
+	err := exportCert(secretsPath, certJsonExpr, caChainJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
 	if err != nil {
 		log.Println(exportCertErr, err)
 	}
+
 	err = setLastModTime(secretsPath)
 	if err != nil {
-		log.Fatal("Error while getting file info:", err)
+		log.Println("Error while getting file info:", err)
 	}
+
+	// reload nginx may fail if the nginx container is not started. The cert-watcher still needs to keep running.
 	ok := reloadNginx()
 	if !ok {
-		log.Fatal("Error reloading nginx")
+		log.Println("Error reloading nginx")
 	}
 	return err
 }
@@ -164,25 +172,40 @@ func checkFileUpdated(filePath string) bool {
 }
 
 // reloadNginx sends a request to the nginx reload endpoint and returns true if the request was successful
+// reload nginx may fail if the nginx container is not started. The cert-watcher still needs to keep running.
 func reloadNginx() bool {
 	resp, err := http.Get(nginxReloadEndpoint)
 	if err != nil {
-		log.Fatalln("Error making request:", err)
+		log.Println("Error making request:", err)
 	}
-	defer resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
+	if resp != nil {
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}
+	return false
 }
 
-// exportCert reads the cert and key from the secrets file and writes them to the certOutputPath and keyOutputPath respectively
-func exportCert(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) error {
+// exportCert exports the full ca chain cert and key from the secrets file and writes them to the output paths
+func exportCert(secretsPath string, certJsonExpr jp.Expr, caChainJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) error {
 	log.Println("exporting cert")
-	cert, key, err := readDataFromSecretsFile(secretsPath, certJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
+	fullCaChain, key, err := readDataFromSecretsFile(secretsPath, certJsonExpr, caChainJsonExpr, keyJsonExpr, certOutputPath, keyOutputPath)
 	if err != nil {
 		return err
 	}
-	err = replaceCertBundle([]byte(cert), certOutputPath)
+
+	fullCaChainBytes, err := base64.StdEncoding.DecodeString(fullCaChain)
+	if err != nil {
+		return err
+	}
+
+	keyBytes, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return err
+	}
+
+	err = replaceCertBundle(fullCaChainBytes, certOutputPath)
 	if err == nil {
-		return replaceCertBundle([]byte(key), keyOutputPath)
+		return replaceCertBundle(keyBytes, keyOutputPath)
 	}
 	return err
 }
@@ -207,8 +230,8 @@ func replaceCertBundle(dataBytes []byte, outputPath string) error {
 	return os.Rename(tempFile.Name(), outputPath)
 }
 
-// readDataFromSecretsFile reads the cert and key from the secrets file and returns them as strings
-func readDataFromSecretsFile(secretsPath string, certJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) (string, string, error) {
+// readDataFromSecretsFile reads the full CA chain and key from the secrets file and returns them as strings
+func readDataFromSecretsFile(secretsPath string, certJsonExpr jp.Expr, caChainJsonExpr jp.Expr, keyJsonExpr jp.Expr, certOutputPath string, keyOutputPath string) (string, string, error) {
 	secretsJsonFile, err := os.Open(secretsPath)
 	if err != nil {
 		return "", "", err
@@ -217,21 +240,27 @@ func readDataFromSecretsFile(secretsPath string, certJsonExpr jp.Expr, keyJsonEx
 	defer secretsJsonFile.Close()
 	secretParsed, err := oj.Load(secretsJsonFile)
 	log.Println("reading secrets file", secretParsed)
-
 	if err != nil {
 		return "", "", err
 	}
-	cert := certJsonExpr.Get(secretParsed)
+
+	// get CA Chain data
+	caChain := caChainJsonExpr.Get(secretParsed)
 	var caChainValues []string
-	for _, val := range cert {
+	for _, val := range caChain {
 		caChainValues = append(caChainValues, fmt.Sprint(val))
 	}
-	caChainStr := strings.Join(caChainValues, "")
+	caChainStr := strings.Join(caChainValues, "\n")
 
 	if caChainStr != "" {
-		key := keyJsonExpr.First(secretParsed)
-		if keyStr, ok := key.(string); ok && keyStr != "" {
-			return caChainStr, keyStr, nil
+		// Get cert and key data
+		cert := certJsonExpr.First(secretParsed)
+		if certStr, ok := cert.(string); ok && certStr != "" {
+			fullCaChain := fmt.Sprintf("%s\n%s", certStr, caChainStr)
+			key := keyJsonExpr.First(secretParsed)
+			if keyStr, ok := key.(string); ok && keyStr != "" {
+				return fullCaChain, keyStr, nil
+			}
 		}
 	}
 	return "", "", fmt.Errorf("no cert data found")
