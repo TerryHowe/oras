@@ -37,3 +37,8 @@ func ShortDigest(desc ocispec.Descriptor) (digestString string) {
 	}
 	return digestString
 }
+
+// GenerateContentKey generates a unique key for each content descriptor, using its digest and name.
+func GenerateContentKey(desc ocispec.Descriptor) string {
+	return desc.Digest.String() + desc.Annotations[ocispec.AnnotationTitle]
+}
