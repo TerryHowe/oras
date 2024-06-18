@@ -16,27 +16,26 @@ limitations under the License.
 package json
 
 import (
-	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
 	"oras.land/oras/cmd/oras/internal/display/metadata/model"
-	"oras.land/oras/cmd/oras/internal/display/utils"
 	"oras.land/oras/cmd/oras/internal/option"
 	"oras.land/oras/internal/contentutil"
 )
 
 // PushHandler handles JSON metadata output for push events.
 type PushHandler struct {
-	path   string
-	out    io.Writer
-	tagged model.Tagged
+	path    string
+	printer *output.Printer
+	tagged  model.Tagged
 }
 
 // NewPushHandler creates a new handler for push events.
-func NewPushHandler(out io.Writer) metadata.PushHandler {
+func NewPushHandler(printer *output.Printer) metadata.PushHandler {
 	return &PushHandler{
-		out: out,
+		printer: printer,
 	}
 }
 
@@ -57,5 +56,5 @@ func (ph *PushHandler) OnCopied(opts *option.Target) error {
 
 // OnCompleted is called after the push is completed.
 func (ph *PushHandler) OnCompleted(root ocispec.Descriptor) error {
-	return utils.PrintPrettyJSON(ph.out, model.NewPush(root, ph.path, ph.tagged.Tags()))
+	return output.PrintPrettyJSON(ph.printer, model.NewPush(root, ph.path, ph.tagged.Tags()))
 }

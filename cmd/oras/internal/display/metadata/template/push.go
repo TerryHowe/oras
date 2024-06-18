@@ -16,7 +16,7 @@ limitations under the License.
 package template
 
 import (
-	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
@@ -30,13 +30,13 @@ type PushHandler struct {
 	template string
 	path     string
 	tagged   model.Tagged
-	out      io.Writer
+	printer  *output.Printer
 }
 
 // NewPushHandler returns a new handler for push events.
-func NewPushHandler(out io.Writer, template string) metadata.PushHandler {
+func NewPushHandler(printer *output.Printer, template string) metadata.PushHandler {
 	return &PushHandler{
-		out:      out,
+		printer:  printer,
 		template: template,
 	}
 }
@@ -58,5 +58,5 @@ func (ph *PushHandler) OnCopied(opts *option.Target) error {
 
 // OnCompleted is called after the push is completed.
 func (ph *PushHandler) OnCompleted(root ocispec.Descriptor) error {
-	return parseAndWrite(ph.out, model.NewPush(root, ph.path, ph.tagged.Tags()), ph.template)
+	return output.ParseAndWrite(ph.printer, model.NewPush(root, ph.path, ph.tagged.Tags()), ph.template)
 }

@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
@@ -63,8 +64,9 @@ func TestPushHandler_OnCompleted(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			printer := output.NewPrinter(tt.out, false)
 			p := &PushHandler{
-				out: tt.out,
+				printer: printer,
 			}
 			if err := p.OnCompleted(tt.root); (err != nil) != tt.wantErr {
 				t.Errorf("PushHandler.OnCompleted() error = %v, wantErr %v", err, tt.wantErr)

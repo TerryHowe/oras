@@ -18,12 +18,12 @@ package json
 import (
 	"fmt"
 	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
 	"oras.land/oras/cmd/oras/internal/display/metadata/model"
-	"oras.land/oras/cmd/oras/internal/display/utils"
 )
 
 // discoverHandler handles json metadata output for discover events.
@@ -59,5 +59,5 @@ func (h *discoverHandler) OnDiscovered(referrer, subject ocispec.Descriptor) err
 
 // OnCompleted implements metadata.DiscoverHandler.
 func (h *discoverHandler) OnCompleted() error {
-	return utils.PrintPrettyJSON(h.out, model.NewDiscover(h.path, h.referrers))
+	return output.PrintPrettyJSON(h.out, model.NewDiscover(h.path, h.referrers))
 }

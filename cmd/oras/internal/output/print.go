@@ -55,6 +55,19 @@ func (p *Printer) Println(a ...any) error {
 	return nil
 }
 
+// Fprintf prints objects concurrent-safely with newline.
+func (p *Printer) Fprintf(format string, a ...any) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	_, err := fmt.Fprintf(p.out, format, a...)
+	if err != nil {
+		err = fmt.Errorf("display output error: %w", err)
+		_, _ = fmt.Fprint(os.Stderr, err)
+	}
+	// Errors are handled above, so return nil
+	return nil
+}
+
 // PrintVerbose prints when verbose is true.
 func (p *Printer) PrintVerbose(a ...any) error {
 	if !p.verbose {

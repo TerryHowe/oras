@@ -16,7 +16,7 @@ limitations under the License.
 package template
 
 import (
-	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
@@ -28,13 +28,13 @@ import (
 type PullHandler struct {
 	template string
 	path     string
-	out      io.Writer
+	printer  *output.Printer
 	pulled   model.Pulled
 }
 
 // OnCompleted implements metadata.PullHandler.
 func (ph *PullHandler) OnCompleted(opts *option.Target, desc ocispec.Descriptor) error {
-	return parseAndWrite(ph.out, model.NewPull(ph.path+"@"+desc.Digest.String(), ph.pulled.Files()), ph.template)
+	return output.ParseAndWrite(ph.printer, model.NewPull(ph.path+"@"+desc.Digest.String(), ph.pulled.Files()), ph.template)
 }
 
 // OnFilePulled implements metadata.PullHandler.
@@ -48,10 +48,10 @@ func (ph *PullHandler) OnLayerSkipped(ocispec.Descriptor) error {
 }
 
 // NewPullHandler returns a new handler for pull events.
-func NewPullHandler(out io.Writer, path string, template string) metadata.PullHandler {
+func NewPullHandler(printer *output.Printer, path string, template string) metadata.PullHandler {
 	return &PullHandler{
 		path:     path,
 		template: template,
-		out:      out,
+		printer:  printer,
 	}
 }

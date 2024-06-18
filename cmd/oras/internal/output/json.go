@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package utils
+package output
 
 import (
 	"bytes"
@@ -23,8 +23,8 @@ import (
 )
 
 // PrintPrettyJSON prints the object to the writer in JSON format.
-func PrintPrettyJSON(out io.Writer, object any) error {
-	encoder := json.NewEncoder(out)
+func PrintPrettyJSON(printer *Printer, object any) error {
+	encoder := json.NewEncoder(printer.out)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(object)
 }

@@ -17,7 +17,7 @@ package template
 
 import (
 	"encoding/json"
-	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
@@ -27,14 +27,14 @@ import (
 // manifestFetchHandler handles JSON metadata output for manifest fetch events.
 type manifestFetchHandler struct {
 	template string
-	out      io.Writer
+	printer  *output.Printer
 }
 
 // NewManifestFetchHandler creates a new handler for manifest fetch events.
-func NewManifestFetchHandler(out io.Writer, template string) metadata.ManifestFetchHandler {
+func NewManifestFetchHandler(printer *output.Printer, template string) metadata.ManifestFetchHandler {
 	return &manifestFetchHandler{
 		template: template,
-		out:      out,
+		printer:  printer,
 	}
 }
 
@@ -44,5 +44,5 @@ func (h *manifestFetchHandler) OnFetched(path string, desc ocispec.Descriptor, c
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		manifest = nil
 	}
-	return parseAndWrite(h.out, model.NewFetched(path, desc, manifest), h.template)
+	return output.ParseAndWrite(h.printer, model.NewFetched(path, desc, manifest), h.template)
 }

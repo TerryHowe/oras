@@ -13,15 +13,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package template
+package output
 
 import (
-	"os"
-	"testing"
+	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
 )
 
-func Test_parseAndWrite_err(t *testing.T) {
-	if err := parseAndWrite(os.Stdout, func() {}, ""); err == nil {
-		t.Errorf("should return error")
+func ParseAndWrite(printer *Printer, object any, templateStr string) error {
+	// parse template
+	t, err := template.New("format output").Funcs(sprig.FuncMap()).Parse(templateStr)
+	if err != nil {
+		return err
 	}
+	// convert object to map[string]any
+	converted, err := ToMap(object)
+	if err != nil {
+		return err
+	}
+	return t.Execute(printer.out, converted)
 }

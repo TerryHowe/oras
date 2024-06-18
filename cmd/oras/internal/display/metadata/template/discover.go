@@ -17,7 +17,7 @@ package template
 
 import (
 	"fmt"
-	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
@@ -31,13 +31,13 @@ type discoverHandler struct {
 	template  string
 	path      string
 	root      ocispec.Descriptor
-	out       io.Writer
+	printer   *output.Printer
 }
 
 // NewDiscoverHandler creates a new handler for discover events.
-func NewDiscoverHandler(out io.Writer, root ocispec.Descriptor, path string, template string) metadata.DiscoverHandler {
+func NewDiscoverHandler(printer *output.Printer, root ocispec.Descriptor, path string, template string) metadata.DiscoverHandler {
 	return &discoverHandler{
-		out:      out,
+		printer:  printer,
 		root:     root,
 		path:     path,
 		template: template,
@@ -60,5 +60,5 @@ func (h *discoverHandler) OnDiscovered(referrer, subject ocispec.Descriptor) err
 
 // OnCompleted implements metadata.DiscoverHandler.
 func (h *discoverHandler) OnCompleted() error {
-	return parseAndWrite(h.out, model.NewDiscover(h.path, h.referrers), h.template)
+	return output.ParseAndWrite(h.printer, model.NewDiscover(h.path, h.referrers), h.template)
 }

@@ -16,20 +16,19 @@ limitations under the License.
 package json
 
 import (
-	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
 	"oras.land/oras/cmd/oras/internal/display/metadata/model"
-	"oras.land/oras/cmd/oras/internal/display/utils"
 	"oras.land/oras/cmd/oras/internal/option"
 )
 
 // PullHandler handles JSON metadata output for pull events.
 type PullHandler struct {
-	path   string
-	pulled model.Pulled
-	out    io.Writer
+	path    string
+	pulled  model.Pulled
+	printer *output.Printer
 }
 
 // OnLayerSkipped implements metadata.PullHandler.
@@ -38,10 +37,10 @@ func (ph *PullHandler) OnLayerSkipped(ocispec.Descriptor) error {
 }
 
 // NewPullHandler returns a new handler for Pull events.
-func NewPullHandler(out io.Writer, path string) metadata.PullHandler {
+func NewPullHandler(printer *output.Printer, path string) metadata.PullHandler {
 	return &PullHandler{
-		out:  out,
-		path: path,
+		printer: printer,
+		path:    path,
 	}
 }
 
@@ -52,5 +51,5 @@ func (ph *PullHandler) OnFilePulled(name string, outputDir string, desc ocispec.
 
 // OnCompleted implements metadata.PullHandler.
 func (ph *PullHandler) OnCompleted(opts *option.Target, desc ocispec.Descriptor) error {
-	return utils.PrintPrettyJSON(ph.out, model.NewPull(ph.path+"@"+desc.Digest.String(), ph.pulled.Files()))
+	return output.PrintPrettyJSON(ph.printer, model.NewPull(ph.path+"@"+desc.Digest.String(), ph.pulled.Files()))
 }

@@ -16,28 +16,27 @@ limitations under the License.
 package json
 
 import (
-	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
 	"oras.land/oras/cmd/oras/internal/display/metadata/model"
-	"oras.land/oras/cmd/oras/internal/display/utils"
 	"oras.land/oras/cmd/oras/internal/option"
 )
 
 // AttachHandler handles json metadata output for attach events.
 type AttachHandler struct {
-	out io.Writer
+	printer *output.Printer
 }
 
 // NewAttachHandler creates a new handler for attach events.
-func NewAttachHandler(out io.Writer) metadata.AttachHandler {
+func NewAttachHandler(printer *output.Printer) metadata.AttachHandler {
 	return &AttachHandler{
-		out: out,
+		printer: printer,
 	}
 }
 
 // OnCompleted is called when the attach command is completed.
 func (ah *AttachHandler) OnCompleted(opts *option.Target, root, subject ocispec.Descriptor) error {
-	return utils.PrintPrettyJSON(ah.out, model.NewAttach(root, opts.Path))
+	return output.PrintPrettyJSON(ah.printer, model.NewAttach(root, opts.Path))
 }

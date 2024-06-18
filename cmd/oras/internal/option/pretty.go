@@ -17,9 +17,9 @@ package option
 
 import (
 	"io"
+	"oras.land/oras/cmd/oras/internal/output"
 
 	"github.com/spf13/pflag"
-	"oras.land/oras/cmd/oras/internal/display/utils"
 )
 
 // Pretty option struct.
@@ -35,5 +35,5 @@ func (opts *Pretty) ApplyFlags(fs *pflag.FlagSet) {
 // Output outputs the prettified content if `--pretty` flag is used. Otherwise
 // outputs the original content.
 func (opts *Pretty) Output(w io.Writer, content []byte) error {
-	return utils.PrintJSON(w, content, opts.Pretty)
+	return output.PrintJSON(w, content, opts.Pretty)
 }
