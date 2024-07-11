@@ -20,12 +20,12 @@ import (
 	"os"
 	"sync"
 
-	"oras.land/oras/cmd/oras/internal/output"
+	"oras.land/oras/cmd/oras/internal/display/status/track"
+	"oras.land/oras/internal/descriptor"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
-	"oras.land/oras/cmd/oras/internal/display/status/track"
 )
 
 // TTYPushHandler handles TTY status output for push command.
@@ -70,9 +70,17 @@ func (ph *TTYPushHandler) UpdateCopyOptions(opts *oras.CopyGraphOptions, fetcher
 	}
 	opts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-		return output.PrintSuccessorStatus(ctx, desc, fetcher, committed, func(d ocispec.Descriptor) error {
-			return ph.tracked.Prompt(d, PushPromptSkipped)
-		})
+		successors, err := descriptor.GetSuccessors(ctx, desc, fetcher, committed)
+		if err != nil {
+			return err
+		}
+		for _, successor := range successors {
+			err = ph.tracked.Prompt(successor, PushPromptSkipped)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 }
 

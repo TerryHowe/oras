@@ -16,8 +16,11 @@ limitations under the License.
 package descriptor
 
 import (
+	"context"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/content"
+	"sync"
 
 	"oras.land/oras/internal/docker"
 )
@@ -51,4 +54,19 @@ func GetTitleOrMediaType(desc ocispec.Descriptor) (name string, isTitle bool) {
 // digest and name.
 func GenerateContentKey(desc ocispec.Descriptor) string {
 	return desc.Digest.String() + desc.Annotations[ocispec.AnnotationTitle]
+}
+
+// GetSuccessors prints transfer status of successors.
+func GetSuccessors(ctx context.Context, desc ocispec.Descriptor, fetcher content.Fetcher, committed *sync.Map) (successors []ocispec.Descriptor, err error) {
+	allSuccessors, err := content.Successors(ctx, fetcher, desc)
+	if err != nil {
+		return nil, err
+	}
+	for _, s := range allSuccessors {
+		name := s.Annotations[ocispec.AnnotationTitle]
+		if v, ok := committed.Load(s.Digest.String()); ok && v != name {
+			successors = append(successors, s)
+		}
+	}
+	return successors, nil
 }

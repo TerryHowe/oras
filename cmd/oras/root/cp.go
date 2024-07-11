@@ -38,6 +38,7 @@ import (
 	oerrors "oras.land/oras/cmd/oras/internal/errors"
 	"oras.land/oras/cmd/oras/internal/option"
 	"oras.land/oras/cmd/oras/internal/output"
+	"oras.land/oras/internal/descriptor"
 	"oras.land/oras/internal/docker"
 	"oras.land/oras/internal/graph"
 	"oras.land/oras/internal/listener"
@@ -188,8 +189,12 @@ func doCopy(ctx context.Context, printer *output.Printer, src oras.ReadOnlyGraph
 		}
 		extendedCopyOptions.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			if err := output.PrintSuccessorStatus(ctx, desc, dst, committed, printer.StatusPrinter(promptSkipped)); err != nil {
+			successors, err := descriptor.GetSuccessors(ctx, desc, dst, committed)
+			if err != nil {
 				return err
+			}
+			for _, successor := range successors {
+				_ = printer.PrintStatus(successor, promptSkipped)
 			}
 			return printer.PrintStatus(desc, promptCopied)
 		}
@@ -211,9 +216,17 @@ func doCopy(ctx context.Context, printer *output.Printer, src oras.ReadOnlyGraph
 		}
 		extendedCopyOptions.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			return output.PrintSuccessorStatus(ctx, desc, tracked, committed, func(desc ocispec.Descriptor) error {
-				return tracked.Prompt(desc, promptSkipped)
-			})
+			successors, err := descriptor.GetSuccessors(ctx, desc, tracked, committed)
+			if err != nil {
+				return err
+			}
+			for _, successor := range successors {
+				err = tracked.Prompt(successor, promptSkipped)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		}
 		extendedCopyOptions.OnMounted = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])

@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"oras.land/oras/cmd/oras/internal/output"
+	"oras.land/oras/internal/descriptor"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
@@ -65,8 +66,12 @@ func (ph *TextPushHandler) UpdateCopyOptions(opts *oras.CopyGraphOptions, fetche
 	}
 	opts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-		if err := output.PrintSuccessorStatus(ctx, desc, fetcher, committed, ph.printer.StatusPrinter(PushPromptSkipped)); err != nil {
+		successors, err := descriptor.GetSuccessors(ctx, desc, fetcher, committed)
+		if err != nil {
 			return err
+		}
+		for _, successor := range successors {
+			_ = ph.printer.PrintStatus(successor, PushPromptSkipped)
 		}
 		return ph.printer.PrintStatus(desc, PushPromptUploaded)
 	}
