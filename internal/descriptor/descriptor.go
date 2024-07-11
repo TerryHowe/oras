@@ -17,10 +17,11 @@ package descriptor
 
 import (
 	"context"
+	"sync"
+
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
-	"sync"
 
 	"oras.land/oras/internal/docker"
 )
