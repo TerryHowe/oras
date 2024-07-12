@@ -17,7 +17,6 @@ package descriptor
 
 import (
 	"context"
-	"sync"
 
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -57,15 +56,16 @@ func GenerateContentKey(desc ocispec.Descriptor) string {
 	return desc.Digest.String() + desc.Annotations[ocispec.AnnotationTitle]
 }
 
-// GetSuccessors prints transfer status of successors.
-func GetSuccessors(ctx context.Context, desc ocispec.Descriptor, fetcher content.Fetcher, committed *sync.Map) (successors []ocispec.Descriptor, err error) {
+// GetSuccessors fetches successors and returns filterred ones.
+func GetSuccessors(ctx context.Context, desc ocispec.Descriptor, fetcher content.Fetcher, filter func(ocispec.Descriptor) bool) ([]ocispec.Descriptor, error) {
 	allSuccessors, err := content.Successors(ctx, fetcher, desc)
 	if err != nil {
 		return nil, err
 	}
+
+	var successors []ocispec.Descriptor
 	for _, s := range allSuccessors {
-		name := s.Annotations[ocispec.AnnotationTitle]
-		if v, ok := committed.Load(s.Digest.String()); ok && v != name {
+		if filter(s) {
 			successors = append(successors, s)
 		}
 	}

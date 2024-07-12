@@ -15,6 +15,12 @@ limitations under the License.
 
 package status
 
+import (
+	"sync"
+
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+)
+
 // Prompts for pull events.
 const (
 	PullPromptDownloading = "Downloading"
@@ -32,3 +38,14 @@ const (
 	PushPromptSkipped   = "Skipped  "
 	PushPromptExists    = "Exists   "
 )
+
+// DeduplicatedFilter filters out deduplicated descriptors.
+func DeduplicatedFilter(committed *sync.Map) func(desc ocispec.Descriptor) bool {
+	return func(desc ocispec.Descriptor) bool {
+
+		name := desc.Annotations[ocispec.AnnotationTitle]
+		v, ok := committed.Load(desc.Digest.String())
+		// committed but not printed == deduplicated
+		return ok && v != name
+	}
+}
