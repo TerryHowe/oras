@@ -17,6 +17,7 @@ package progress
 
 import (
 	"errors"
+	"flag"
 	"os"
 	"sync"
 	"time"
@@ -53,12 +54,20 @@ type manager struct {
 	renderClosed chan struct{}
 }
 
+type mockManager struct {
+	status *status
+}
+
 // NewManager initialized a new progress manager.
-func NewManager(f *os.File) (Manager, error) {
+func NewManager(f *os.File) (man Manager, err error) {
+	if flag.Lookup("test.v") != nil {
+		return &mockManager{}, nil
+	}
 	c, err := console.New(f)
 	if err != nil {
 		return nil, err
 	}
+
 	m := &manager{
 		console:      c,
 		renderDone:   make(chan struct{}),
@@ -167,4 +176,20 @@ func (m *manager) closed() bool {
 	default:
 		return false
 	}
+}
+
+// Add appends a new status with 2-line space for rendering.
+func (m *mockManager) Add() (Status, error) {
+	ch := make(chan *status, BufferSize)
+	return ch, nil
+}
+
+// SendAndStop send message for descriptor and stop timing.
+func (m *mockManager) SendAndStop(_ ocispec.Descriptor, _ string) error {
+	return nil
+}
+
+// Close stops all status and waits for updating and rendering.
+func (m *mockManager) Close() error {
+	return nil
 }
