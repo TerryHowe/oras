@@ -92,7 +92,7 @@ vault:
   clusterAccountName: sis-azure-prod
 
   # Cluster Name (default: stage).
-  clusterName: azure-picasso
+  clusterName: getty
 
   # Vault Address (default: https://stg.vault.nvidia.com:443).
   vaultAddress: https://prod.vault.nvidia.com
