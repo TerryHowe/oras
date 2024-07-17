@@ -56,8 +56,8 @@ func GenerateContentKey(desc ocispec.Descriptor) string {
 	return desc.Digest.String() + desc.Annotations[ocispec.AnnotationTitle]
 }
 
-// GetSuccessors fetches successors and returns filtered ones.
-func GetSuccessors(ctx context.Context, desc ocispec.Descriptor, fetcher content.Fetcher, filter func(ocispec.Descriptor) bool) ([]ocispec.Descriptor, error) {
+// Successors fetches successors and returns filtered ones.
+func Successors(ctx context.Context, desc ocispec.Descriptor, fetcher content.Fetcher, filter func(ocispec.Descriptor) bool) ([]ocispec.Descriptor, error) {
 	allSuccessors, err := content.Successors(ctx, fetcher, desc)
 	if err != nil {
 		return nil, err

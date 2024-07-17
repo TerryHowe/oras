@@ -190,7 +190,7 @@ func doCopy(ctx context.Context, printer *output.Printer, src oras.ReadOnlyGraph
 		}
 		extendedCopyOptions.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			successors, err := descriptor.GetSuccessors(ctx, desc, dst, status.DeduplicatedFilter(committed))
+			successors, err := descriptor.Successors(ctx, desc, dst, status.DeduplicatedFilter(committed))
 			if err != nil {
 				return err
 			}
@@ -217,7 +217,7 @@ func doCopy(ctx context.Context, printer *output.Printer, src oras.ReadOnlyGraph
 		}
 		extendedCopyOptions.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			successors, err := descriptor.GetSuccessors(ctx, desc, tracked, status.DeduplicatedFilter(committed))
+			successors, err := descriptor.Successors(ctx, desc, tracked, status.DeduplicatedFilter(committed))
 			if err != nil {
 				return err
 			}

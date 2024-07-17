@@ -70,7 +70,7 @@ func (ph *TTYPushHandler) UpdateCopyOptions(opts *oras.CopyGraphOptions, fetcher
 	}
 	opts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-		successors, err := descriptor.GetSuccessors(ctx, desc, fetcher, DeduplicatedFilter(committed))
+		successors, err := descriptor.Successors(ctx, desc, fetcher, DeduplicatedFilter(committed))
 		if err != nil {
 			return err
 		}
