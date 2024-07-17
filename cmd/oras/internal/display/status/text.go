@@ -71,7 +71,9 @@ func (ph *TextPushHandler) UpdateCopyOptions(opts *oras.CopyGraphOptions, fetche
 			return err
 		}
 		for _, successor := range successors {
-			_ = ph.printer.PrintStatus(successor, PushPromptSkipped)
+			if err = ph.printer.PrintStatus(successor, PushPromptSkipped); err != nil {
+				return err
+			}
 		}
 		return ph.printer.PrintStatus(desc, PushPromptUploaded)
 	}

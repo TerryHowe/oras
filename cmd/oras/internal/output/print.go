@@ -54,8 +54,7 @@ func (p *Printer) Println(a ...any) error {
 		err = fmt.Errorf("display output error: %w", err)
 		_, _ = fmt.Fprint(p.err, err)
 	}
-	// Errors are handled above, so return nil
-	return nil
+	return err
 }
 
 // Printf prints objects concurrent-safely with newline.

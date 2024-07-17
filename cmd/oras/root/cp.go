@@ -195,7 +195,9 @@ func doCopy(ctx context.Context, printer *output.Printer, src oras.ReadOnlyGraph
 				return err
 			}
 			for _, successor := range successors {
-				_ = printer.PrintStatus(successor, promptSkipped)
+				if err = printer.PrintStatus(successor, promptSkipped); err != nil {
+					return err
+				}
 			}
 			return printer.PrintStatus(desc, promptCopied)
 		}
