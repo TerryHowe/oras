@@ -42,7 +42,6 @@ const (
 // DeduplicatedFilter filters out deduplicated descriptors.
 func DeduplicatedFilter(committed *sync.Map) func(desc ocispec.Descriptor) bool {
 	return func(desc ocispec.Descriptor) bool {
-
 		name := desc.Annotations[ocispec.AnnotationTitle]
 		v, ok := committed.Load(desc.Digest.String())
 		// committed but not printed == deduplicated
