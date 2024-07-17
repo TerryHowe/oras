@@ -60,7 +60,7 @@ func TestPushHandler_OnCompleted(t *testing.T) {
 				Digest:    digest.FromBytes(content),
 				Size:      int64(len(content)),
 			},
-			false, // Printer ignores error
+			true, // Printer ignores error
 		},
 	}
 	for _, tt := range tests {
