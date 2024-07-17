@@ -39,7 +39,6 @@ import (
 	oerrors "oras.land/oras/cmd/oras/internal/errors"
 	"oras.land/oras/cmd/oras/internal/option"
 	"oras.land/oras/cmd/oras/internal/output"
-	"oras.land/oras/internal/descriptor"
 	"oras.land/oras/internal/docker"
 	"oras.land/oras/internal/graph"
 	"oras.land/oras/internal/listener"
@@ -190,7 +189,7 @@ func doCopy(ctx context.Context, printer *output.Printer, src oras.ReadOnlyGraph
 		}
 		extendedCopyOptions.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			successors, err := descriptor.Successors(ctx, desc, dst, status.DeduplicatedFilter(committed))
+			successors, err := graph.FilteredSuccessors(ctx, desc, dst, status.DeduplicatedFilter(committed))
 			if err != nil {
 				return err
 			}
@@ -219,7 +218,7 @@ func doCopy(ctx context.Context, printer *output.Printer, src oras.ReadOnlyGraph
 		}
 		extendedCopyOptions.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			successors, err := descriptor.Successors(ctx, desc, tracked, status.DeduplicatedFilter(committed))
+			successors, err := graph.FilteredSuccessors(ctx, desc, tracked, status.DeduplicatedFilter(committed))
 			if err != nil {
 				return err
 			}
