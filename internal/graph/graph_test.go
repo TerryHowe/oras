@@ -16,75 +16,19 @@ limitations under the License.
 package graph
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"github.com/opencontainers/go-digest"
-	"oras.land/oras-go/v2/content/memory"
 	"reflect"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras/internal/docker"
+	"oras.land/oras/internal/testutils"
 )
 
-type contentFetcher struct {
-	content.Fetcher
-}
-
-func newTestFetcher(t *testing.T) (subject, config, ociImage, dockerImage, index ocispec.Descriptor, fetcher content.Fetcher) {
-	var blobs [][]byte
-	ctx := context.Background()
-	memoryStorage := memory.New()
-	appendBlob := func(mediaType string, blob []byte) ocispec.Descriptor {
-		blobs = append(blobs, blob)
-		desc := ocispec.Descriptor{
-			MediaType: mediaType,
-			Digest:    digest.FromBytes(blob),
-			Size:      int64(len(blob)),
-		}
-		if err := memoryStorage.Push(ctx, desc, bytes.NewReader(blob)); err != nil {
-			t.Errorf("Error pushing %v\n", err)
-		}
-		return desc
-	}
-	generateImage := func(subject *ocispec.Descriptor, mediaType string, config ocispec.Descriptor, layers ...ocispec.Descriptor) ocispec.Descriptor {
-		manifest := ocispec.Manifest{
-			MediaType: mediaType,
-			Subject:   subject,
-			Config:    config,
-			Layers:    layers,
-		}
-		manifestJSON, err := json.Marshal(manifest)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return appendBlob(mediaType, manifestJSON)
-	}
-	generateIndex := func(manifests ...ocispec.Descriptor) ocispec.Descriptor {
-		index := ocispec.Index{
-			Manifests: manifests,
-		}
-		indexJSON, err := json.Marshal(index)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return appendBlob(ocispec.MediaTypeImageIndex, indexJSON)
-	}
-
-	subject = appendBlob(ocispec.MediaTypeImageLayer, []byte("blob"))
-	imageType := "test.image"
-	config = appendBlob(imageType, []byte("config content"))
-	ociImage = generateImage(&subject, ocispec.MediaTypeImageManifest, config)
-	dockerImage = generateImage(&subject, docker.MediaTypeManifest, config)
-	index = generateIndex(subject)
-
-	return subject, config, ociImage, dockerImage, index, &contentFetcher{Fetcher: memoryStorage}
-}
-
 func TestSuccessors(t *testing.T) {
-	subject, config, ociImage, dockerImage, index, fetcher := newTestFetcher(t)
+	mockFetcher := testutils.NewMockFetcher(t)
+	fetcher := mockFetcher.Fetcher
 	ctx := context.Background()
 	type args struct {
 		ctx     context.Context
@@ -101,9 +45,9 @@ func TestSuccessors(t *testing.T) {
 	}{
 		{"should failed to get non-existent OCI image", args{ctx, fetcher, ocispec.Descriptor{MediaType: ocispec.MediaTypeImageManifest}}, nil, nil, nil, true},
 		{"should failed to get non-existent docker image", args{ctx, fetcher, ocispec.Descriptor{MediaType: docker.MediaTypeManifest}}, nil, nil, nil, true},
-		{"should get success of a docker image", args{ctx, fetcher, dockerImage}, nil, &subject, &config, false},
-		{"should get success of an OCI image", args{ctx, fetcher, ociImage}, nil, &subject, &config, false},
-		{"should get success of an index", args{ctx, fetcher, index}, []ocispec.Descriptor{subject}, nil, nil, false},
+		{"should get success of a docker image", args{ctx, fetcher, mockFetcher.DockerImage}, nil, &mockFetcher.Subject, &mockFetcher.Config, false},
+		{"should get success of an OCI image", args{ctx, fetcher, mockFetcher.OciImage}, nil, &mockFetcher.Subject, &mockFetcher.Config, false},
+		{"should get success of an index", args{ctx, fetcher, mockFetcher.Index}, []ocispec.Descriptor{mockFetcher.Subject}, nil, nil, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,40 +70,40 @@ func TestSuccessors(t *testing.T) {
 }
 
 func TestDescriptor_GetSuccessors(t *testing.T) {
-	subject, config, ociImage, _, _, fetcher := newTestFetcher(t)
+	mockFetcher := testutils.NewMockFetcher(t)
 
 	allFilter := func(ocispec.Descriptor) bool {
 		return true
 	}
-	got, err := FilteredSuccessors(context.Background(), ociImage, fetcher, allFilter)
+	got, err := FilteredSuccessors(context.Background(), mockFetcher.OciImage, mockFetcher.Fetcher, allFilter)
 	if nil != err {
 		t.Errorf("FilteredSuccessors unexpected error %v", err)
 	}
 	if len(got) != 2 {
 		t.Errorf("Expected 2 successors got %v", len(got))
 	}
-	if subject.Digest != got[0].Digest {
-		t.Errorf("FilteredSuccessors got %v, want %v", got[0], subject)
+	if mockFetcher.Subject.Digest != got[0].Digest {
+		t.Errorf("FilteredSuccessors got %v, want %v", got[0], mockFetcher.Subject)
 	}
-	if config.Digest != got[1].Digest {
-		t.Errorf("FilteredSuccessors got %v, want %v", got[1], subject)
+	if mockFetcher.Config.Digest != got[1].Digest {
+		t.Errorf("FilteredSuccessors got %v, want %v", got[1], mockFetcher.Subject)
 	}
 
 	noConfig := func(desc ocispec.Descriptor) bool {
-		return desc.Digest != config.Digest
+		return desc.Digest != mockFetcher.Config.Digest
 	}
-	got, err = FilteredSuccessors(context.Background(), ociImage, fetcher, noConfig)
+	got, err = FilteredSuccessors(context.Background(), mockFetcher.OciImage, mockFetcher.Fetcher, noConfig)
 	if nil != err {
 		t.Errorf("FilteredSuccessors unexpected error %v", err)
 	}
 	if len(got) != 1 {
 		t.Errorf("Expected 1 successors got %v", len(got))
 	}
-	if subject.Digest != got[0].Digest {
-		t.Errorf("FilteredSuccessors got %v, want %v", got[0], subject)
+	if mockFetcher.Subject.Digest != got[0].Digest {
+		t.Errorf("FilteredSuccessors got %v, want %v", got[0], mockFetcher.Subject)
 	}
 
-	got, err = FilteredSuccessors(context.Background(), ocispec.Descriptor{MediaType: ocispec.MediaTypeImageManifest}, fetcher, allFilter)
+	got, err = FilteredSuccessors(context.Background(), ocispec.Descriptor{MediaType: ocispec.MediaTypeImageManifest}, mockFetcher.Fetcher, allFilter)
 	if nil == err {
 		t.Error("FilteredSuccessors expected error")
 	}
