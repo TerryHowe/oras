@@ -155,8 +155,14 @@ func (ch *TextCopyHandler) PreCopy(_ context.Context, desc ocispec.Descriptor) e
 // PostCopy implements PostCopy of CopyHandler.
 func (ch *TextCopyHandler) PostCopy(ctx context.Context, desc ocispec.Descriptor) error {
 	ch.committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-	if err := output.PrintSuccessorStatus(ctx, desc, ch.fetcher, ch.committed, ch.printer.StatusPrinter(copyPromptSkipped)); err != nil {
+	successors, err := graph.FilteredSuccessors(ctx, desc, ch.fetcher, DeduplicatedFilter(ch.committed))
+	if err != nil {
 		return err
+	}
+	for _, successor := range successors {
+		if err = ch.printer.PrintStatus(successor, copyPromptSkipped); err != nil {
+			return err
+		}
 	}
 	return ch.printer.PrintStatus(desc, copyPromptCopied)
 }
