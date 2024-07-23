@@ -39,6 +39,15 @@ const (
 	PushPromptExists    = "Exists   "
 )
 
+// Prompts for cp events.
+const (
+	copyPromptExists  = "Exists "
+	copyPromptCopying = "Copying"
+	copyPromptCopied  = "Copied "
+	copyPromptSkipped = "Skipped"
+	copyPromptMounted = "Mounted"
+)
+
 // DeduplicatedFilter filters out deduplicated descriptors.
 func DeduplicatedFilter(committed *sync.Map) func(desc ocispec.Descriptor) bool {
 	return func(desc ocispec.Descriptor) bool {
