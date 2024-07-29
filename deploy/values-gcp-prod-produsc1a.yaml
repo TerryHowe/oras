@@ -1,0 +1,142 @@
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+# Sepcify labels for selecting node.
+nodeSelector: 
+  node.kubernetes.io/instance-type: n2-standard-64
+
+# Number of replicas to create of Container Cache.
+replicaCount: 2
+
+# Domain of target Host where the proxy passes the request to (default: nvcr.io).
+targetHost: nvcr.io
+
+# Container image information used by Container Cache.
+images:
+  # Name of the container image containing Container Cache Nginx Proxy.
+  server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
+
+  # Name of the container image containing Nginx Prometheus Exporter.
+  exporter: nvcr.io/qtfpt1h0bieu/nvcf-core/nginx-prometheus-exporter:1.0
+
+  # Name of Kubernetes secrets used to pull container image during pod deployment.
+  secrets:
+    # The name of the Kubernetes secret to be used (NOT the secret itself).
+    - nvcr-regcred
+
+# Configuration options related to how Container Cache is configured.
+cache:
+  # Size for storing cache keys (default: 10m).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
+  keyStorageSize: 50m
+
+  # Max size of the cache (default: 80g).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
+  maxSize: 500g
+
+  # Period a resource can remain in the cache without being accessed (default: 60d).
+  # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
+  inactive: 60d
+
+  # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
+  # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
+  valid: 30d
+
+# Configuration options related to how Container Cache Persistent Volume is configured.
+persistentVolumeClaim:
+  # Size of persistent volume (default: 100Gi )
+  size: 500Gi
+
+  # Name of storage class for persistent volume claim (default: azurefile )
+  storageClassName: nvcf-cc-sc
+
+# Configuration options related to how Container Cache Service is configured.
+service:
+  # Type of Kubernetes service connection used by the server to provide network API services (default: ClusterIP).
+  # Valid options are ExternalName, ClusterIP, NodePort, and LoadBalancer.
+  type: NodePort
+
+  # Port to use to connect to the Container Cache Service (default: 30345).
+  port: 30345
+
+# Configuration options related to how Container Cache Metrics are configured.
+metrics:
+  # Size for storing cache Metrics (default: 10m).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
+  cacheMetricsStorageSize: 300m
+
+  # Bucket configuration for the throughput histogram (default: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000).
+  # Must be a comma-separated list of positive integers.
+  throughputHistogramBuckets: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000
+
+# Custom annotations to be added to the pod.
+podAnnotations: {}
+
+# Custom labels to be added to the pod.
+podLabels: {}
+
+# Vault configuration.
+vault:
+  # Cluster Cloud Service Provider (default: azure).
+  clusterCSP: gcp
+
+  # Cluster Region (default: scus).
+  clusterRegion: us-central1
+
+  # Cluster Account Name (default: sis-azure-stage).
+  clusterAccountName: sis-gcp-prod
+
+  # Cluster Name (default: stage).
+  clusterName: produsc1a
+
+  # Vault Address (default: https://stg.vault.nvidia.com:443).
+  vaultAddress: https://prod.vault.nvidia.com
+
+  # Node IP address of any node in the cluster.
+  # This must be used in the client daemonset in the CONTAINER_CACHE_IP environment variable in the form "https://<vault.hostIP>:<service.Port>".
+  hostIP: 10.0.0.51
+
+nvcfRootCert: |
+  -----BEGIN CERTIFICATE-----
+  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
+  krIEqBPdo/mgQrVtpB+qRh3dGfcJ
+  -----END CERTIFICATE-----
