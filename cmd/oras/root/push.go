@@ -17,6 +17,7 @@ package root
 
 import (
 	"errors"
+	"oras.land/oras/cmd/oras/internal/display/status/progress"
 	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -151,7 +152,8 @@ Example - Push file "hi.txt" into an OCI image layout folder 'layout-dir' with t
 
 func runPush(cmd *cobra.Command, opts *pushOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	displayStatus, displayMetadata, err := display.NewPushHandler(opts.Printer, opts.Format, opts.TTY)
+	notifier := progress.NewNotifier(opts.TTY, "Action", "Done")
+	displayStatus, displayMetadata, err := display.NewPushHandler(opts.Printer, opts.Format, notifier)
 	if err != nil {
 		return err
 	}

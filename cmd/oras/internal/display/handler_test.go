@@ -16,6 +16,7 @@ limitations under the License.
 package display
 
 import (
+	"oras.land/oras/cmd/oras/internal/display/status/progress"
 	"os"
 	"testing"
 
@@ -24,24 +25,27 @@ import (
 )
 
 func TestNewPushHandler(t *testing.T) {
+	notifier := progress.NewNotifier(os.Stdout, "action", "done")
 	printer := output.NewPrinter(os.Stdout, os.Stderr, false)
-	_, _, err := NewPushHandler(printer, option.Format{Type: option.FormatTypeText.Name}, os.Stdout)
+	_, _, err := NewPushHandler(printer, option.Format{Type: option.FormatTypeText.Name}, notifier)
 	if err != nil {
 		t.Errorf("NewPushHandler() error = %v, want nil", err)
 	}
 }
 
 func TestNewAttachHandler(t *testing.T) {
+	notifier := progress.NewNotifier(os.Stdout, "action", "done")
 	printer := output.NewPrinter(os.Stdout, os.Stderr, false)
-	_, _, err := NewAttachHandler(printer, option.Format{Type: option.FormatTypeText.Name}, os.Stdout)
+	_, _, err := NewAttachHandler(printer, option.Format{Type: option.FormatTypeText.Name}, notifier)
 	if err != nil {
 		t.Errorf("NewAttachHandler() error = %v, want nil", err)
 	}
 }
 
 func TestNewPullHandler(t *testing.T) {
+	notifier := progress.NewNotifier(os.Stdout, "action", "done")
 	printer := output.NewPrinter(os.Stdout, os.Stderr, false)
-	_, _, err := NewPullHandler(printer, option.Format{Type: option.FormatTypeText.Name}, "", os.Stdout)
+	_, _, err := NewPullHandler(printer, option.Format{Type: option.FormatTypeText.Name}, "", notifier)
 	if err != nil {
 		t.Errorf("NewPullHandler() error = %v, want nil", err)
 	}

@@ -16,11 +16,10 @@ limitations under the License.
 package display
 
 import (
-	"io"
-	"os"
-
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"io"
 	fetcher "oras.land/oras-go/v2/content"
+	"oras.land/oras/cmd/oras/internal/display/status/progress"
 
 	"oras.land/oras/cmd/oras/internal/display/content"
 	"oras.land/oras/cmd/oras/internal/display/metadata"
@@ -37,10 +36,10 @@ import (
 )
 
 // NewPushHandler returns status and metadata handlers for push command.
-func NewPushHandler(printer *output.Printer, format option.Format, tty *os.File) (status.PushHandler, metadata.PushHandler, error) {
+func NewPushHandler(printer *output.Printer, format option.Format, notifier progress.Notifier) (status.PushHandler, metadata.PushHandler, error) {
 	var statusHandler status.PushHandler
-	if tty != nil {
-		statusHandler = status.NewTTYPushHandler(tty)
+	if notifier.IsTTY() {
+		statusHandler = status.NewTTYPushHandler(notifier)
 	} else if format.Type == option.FormatTypeText.Name {
 		statusHandler = status.NewTextPushHandler(printer)
 	} else {
@@ -62,10 +61,10 @@ func NewPushHandler(printer *output.Printer, format option.Format, tty *os.File)
 }
 
 // NewAttachHandler returns status and metadata handlers for attach command.
-func NewAttachHandler(printer *output.Printer, format option.Format, tty *os.File) (status.AttachHandler, metadata.AttachHandler, error) {
+func NewAttachHandler(printer *output.Printer, format option.Format, notifier progress.Notifier) (status.AttachHandler, metadata.AttachHandler, error) {
 	var statusHandler status.AttachHandler
-	if tty != nil {
-		statusHandler = status.NewTTYAttachHandler(tty)
+	if notifier.IsTTY() {
+		statusHandler = status.NewTTYAttachHandler(notifier)
 	} else if format.Type == option.FormatTypeText.Name {
 		statusHandler = status.NewTextAttachHandler(printer)
 	} else {
@@ -87,10 +86,10 @@ func NewAttachHandler(printer *output.Printer, format option.Format, tty *os.Fil
 }
 
 // NewPullHandler returns status and metadata handlers for pull command.
-func NewPullHandler(printer *output.Printer, format option.Format, path string, tty *os.File) (status.PullHandler, metadata.PullHandler, error) {
+func NewPullHandler(printer *output.Printer, format option.Format, path string, notifier progress.Notifier) (status.PullHandler, metadata.PullHandler, error) {
 	var statusHandler status.PullHandler
-	if tty != nil {
-		statusHandler = status.NewTTYPullHandler(tty)
+	if notifier.IsTTY() {
+		statusHandler = status.NewTTYPullHandler(notifier)
 	} else if format.Type == option.FormatTypeText.Name {
 		statusHandler = status.NewTextPullHandler(printer)
 	} else {

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"oras.land/oras/cmd/oras/internal/display/status"
+	"oras.land/oras/cmd/oras/internal/display/status/progress"
 	"slices"
 	"strings"
 	"sync"
@@ -186,25 +187,29 @@ func doCopy(ctx context.Context, copyHandler status.CopyHandler, src oras.ReadOn
 		extendedCopyOptions.OnMounted = copyHandler.OnMounted
 	} else {
 		// TTY output
-		tracked, err := track.NewTarget(dst, promptCopying, promptCopied, opts.TTY)
+		notifier := progress.NewNotifier(opts.TTY, promptCopying, promptCopied)
+		err := notifier.Open()
 		if err != nil {
 			return ocispec.Descriptor{}, err
 		}
-		defer tracked.Close()
+		defer notifier.Close()
+
+		tracked := track.NewTarget(dst, notifier)
+
 		dst = tracked
 		extendedCopyOptions.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			return tracked.Prompt(desc, promptExists)
+			return notifier.Prompt(desc, promptExists)
 		}
 		extendedCopyOptions.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
 			return output.PrintSuccessorStatus(ctx, desc, tracked, committed, func(desc ocispec.Descriptor) error {
-				return tracked.Prompt(desc, promptSkipped)
+				return notifier.Prompt(desc, promptSkipped)
 			})
 		}
 		extendedCopyOptions.OnMounted = func(ctx context.Context, desc ocispec.Descriptor) error {
 			committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-			return tracked.Prompt(desc, promptMounted)
+			return notifier.Prompt(desc, promptMounted)
 		}
 	}
 

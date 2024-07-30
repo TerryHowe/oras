@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"oras.land/oras/cmd/oras/internal/display/status/progress"
 	"sync"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -112,7 +113,8 @@ Example - Pull artifact files from an OCI layout archive 'layout.tar':
 
 func runPull(cmd *cobra.Command, opts *pullOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	statusHandler, metadataHandler, err := display.NewPullHandler(opts.Printer, opts.Format, opts.Path, opts.TTY)
+	notifier := progress.NewNotifier(opts.TTY, "Action", "Done")
+	statusHandler, metadataHandler, err := display.NewPullHandler(opts.Printer, opts.Format, opts.Path, notifier)
 	if err != nil {
 		return err
 	}

@@ -62,7 +62,7 @@ func Test_referenceGraphTarget_PushReference(t *testing.T) {
 	tag := "tagged"
 	actionPrompt := "action"
 	donePrompt := "done"
-	target, err := NewTarget(&testReferenceGraphTarget{src}, actionPrompt, donePrompt, device)
+	target, err := NewReferenceTarget(&testReferenceGraphTarget{src}, actionPrompt, donePrompt, device)
 	if err != nil {
 		t.Fatal(err)
 	}

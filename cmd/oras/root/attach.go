@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"oras.land/oras/cmd/oras/internal/display/status/progress"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/spf13/cobra"
@@ -119,7 +120,8 @@ Example - Attach file to the manifest tagged 'v1' in an OCI image layout folder 
 
 func runAttach(cmd *cobra.Command, opts *attachOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	displayStatus, displayMetadata, err := display.NewAttachHandler(opts.Printer, opts.Format, opts.TTY)
+	notifier := progress.NewNotifier(opts.TTY, "Action", "Done")
+	displayStatus, displayMetadata, err := display.NewAttachHandler(opts.Printer, opts.Format, notifier)
 	if err != nil {
 		return err
 	}

@@ -17,10 +17,8 @@ package track
 
 import (
 	"context"
-	"io"
-	"os"
-
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"io"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras/cmd/oras/internal/display/status/progress"
@@ -30,12 +28,11 @@ import (
 type GraphTarget interface {
 	oras.GraphTarget
 	io.Closer
-	Prompt(desc ocispec.Descriptor, prompt string) error
 }
 
 type graphTarget struct {
 	oras.GraphTarget
-	manager      progress.Manager
+	notifier     progress.Notifier
 	actionPrompt string
 	donePrompt   string
 }
@@ -45,24 +42,26 @@ type referenceGraphTarget struct {
 }
 
 // NewTarget creates a new tracked Target.
-func NewTarget(t oras.GraphTarget, actionPrompt, donePrompt string, tty *os.File) (GraphTarget, error) {
-	manager, err := progress.NewManager(tty)
-	if err != nil {
-		return nil, err
+func NewTarget(t oras.GraphTarget, notifier progress.Notifier) GraphTarget {
+	var gt GraphTarget
+	gt = &graphTarget{
+		GraphTarget: t,
+		notifier:    notifier,
 	}
-	gt := &graphTarget{
-		GraphTarget:  t,
-		manager:      manager,
-		actionPrompt: actionPrompt,
-		donePrompt:   donePrompt,
-	}
+	return gt
+}
 
-	if _, ok := t.(registry.ReferencePusher); ok {
-		return &referenceGraphTarget{
-			graphTarget: gt,
-		}, nil
+// NewReferenceTarget creates a new tracked Target.
+func NewReferenceTarget(t oras.GraphTarget, notifier progress.Notifier) GraphTarget {
+	gt := &graphTarget{
+		GraphTarget: t,
+		notifier:    notifier,
 	}
-	return gt, nil
+	var rgt GraphTarget
+	rgt = &referenceGraphTarget{
+		graphTarget: gt,
+	}
+	return rgt
 }
 
 // Mount mounts a blob from a specified repository. This method is invoked only
@@ -74,7 +73,7 @@ func (t *graphTarget) Mount(ctx context.Context, desc ocispec.Descriptor, fromRe
 
 // Push pushes the content to the base oras.GraphTarget with tracking.
 func (t *graphTarget) Push(ctx context.Context, expected ocispec.Descriptor, content io.Reader) error {
-	r, err := managedReader(content, expected, t.manager, t.actionPrompt, t.donePrompt)
+	r, err := managedReader(content, expected, nil, t.actionPrompt, t.donePrompt)
 	if err != nil {
 		return err
 	}
@@ -89,7 +88,7 @@ func (t *graphTarget) Push(ctx context.Context, expected ocispec.Descriptor, con
 
 // PushReference pushes the content to the base oras.GraphTarget with tracking.
 func (rgt *referenceGraphTarget) PushReference(ctx context.Context, expected ocispec.Descriptor, content io.Reader, reference string) error {
-	r, err := managedReader(content, expected, rgt.manager, rgt.actionPrompt, rgt.donePrompt)
+	r, err := managedReader(content, expected, nil, rgt.actionPrompt, rgt.donePrompt)
 	if err != nil {
 		return err
 	}
@@ -105,10 +104,5 @@ func (rgt *referenceGraphTarget) PushReference(ctx context.Context, expected oci
 
 // Close closes the tracking manager.
 func (t *graphTarget) Close() error {
-	return t.manager.Close()
-}
-
-// Prompt prompts the user with the provided prompt and descriptor.
-func (t *graphTarget) Prompt(desc ocispec.Descriptor, prompt string) error {
-	return t.manager.SendAndStop(desc, prompt)
+	return t.notifier.Close()
 }

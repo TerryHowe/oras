@@ -17,7 +17,7 @@ package status
 
 import (
 	"context"
-	"os"
+	"oras.land/oras/cmd/oras/internal/display/status/progress"
 	"sync"
 
 	"oras.land/oras/cmd/oras/internal/output"
@@ -30,14 +30,14 @@ import (
 
 // TTYPushHandler handles TTY status output for push command.
 type TTYPushHandler struct {
-	tty     *os.File
-	tracked track.GraphTarget
+	tracked  track.GraphTarget
+	notifier progress.Notifier
 }
 
 // NewTTYPushHandler returns a new handler for push status events.
-func NewTTYPushHandler(tty *os.File) PushHandler {
+func NewTTYPushHandler(notifier progress.Notifier) PushHandler {
 	return &TTYPushHandler{
-		tty: tty,
+		notifier: notifier,
 	}
 }
 
@@ -53,10 +53,12 @@ func (ph *TTYPushHandler) OnEmptyArtifact() error {
 
 // TrackTarget returns a tracked target.
 func (ph *TTYPushHandler) TrackTarget(gt oras.GraphTarget) (oras.GraphTarget, StopTrackTargetFunc, error) {
-	tracked, err := track.NewTarget(gt, PushPromptUploading, PushPromptUploaded, ph.tty)
+	err := ph.notifier.Open()
 	if err != nil {
 		return nil, nil, err
 	}
+	tracked := track.NewTarget(gt, ph.notifier)
+
 	ph.tracked = tracked
 	return tracked, tracked.Close, nil
 }
@@ -66,31 +68,31 @@ func (ph *TTYPushHandler) UpdateCopyOptions(opts *oras.CopyGraphOptions, fetcher
 	committed := &sync.Map{}
 	opts.OnCopySkipped = func(ctx context.Context, desc ocispec.Descriptor) error {
 		committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
-		return ph.tracked.Prompt(desc, PushPromptExists)
+		return ph.notifier.Prompt(desc, PushPromptExists)
 	}
 	opts.PostCopy = func(ctx context.Context, desc ocispec.Descriptor) error {
 		committed.Store(desc.Digest.String(), desc.Annotations[ocispec.AnnotationTitle])
 		return output.PrintSuccessorStatus(ctx, desc, fetcher, committed, func(d ocispec.Descriptor) error {
-			return ph.tracked.Prompt(d, PushPromptSkipped)
+			return ph.notifier.Prompt(d, PushPromptSkipped)
 		})
 	}
 }
 
 // NewTTYAttachHandler returns a new handler for attach status events.
-func NewTTYAttachHandler(tty *os.File) AttachHandler {
-	return NewTTYPushHandler(tty)
+func NewTTYAttachHandler(notifier progress.Notifier) AttachHandler {
+	return NewTTYPushHandler(notifier)
 }
 
 // TTYPullHandler handles TTY status output for pull events.
 type TTYPullHandler struct {
-	tty     *os.File
-	tracked track.GraphTarget
+	tracked  track.GraphTarget
+	notifier progress.Notifier
 }
 
 // NewTTYPullHandler returns a new handler for Pull status events.
-func NewTTYPullHandler(tty *os.File) PullHandler {
+func NewTTYPullHandler(notifier progress.Notifier) PullHandler {
 	return &TTYPullHandler{
-		tty: tty,
+		notifier: notifier,
 	}
 }
 
@@ -111,20 +113,17 @@ func (ph *TTYPullHandler) OnNodeProcessing(_ ocispec.Descriptor) error {
 
 // OnNodeRestored implements PullHandler.
 func (ph *TTYPullHandler) OnNodeRestored(desc ocispec.Descriptor) error {
-	return ph.tracked.Prompt(desc, PullPromptRestored)
+	return ph.notifier.Prompt(desc, PullPromptRestored)
 }
 
 // OnNodeSkipped implements PullHandler.
 func (ph *TTYPullHandler) OnNodeSkipped(desc ocispec.Descriptor) error {
-	return ph.tracked.Prompt(desc, PullPromptSkipped)
+	return ph.notifier.Prompt(desc, PullPromptSkipped)
 }
 
 // TrackTarget returns a tracked target.
 func (ph *TTYPullHandler) TrackTarget(gt oras.GraphTarget) (oras.GraphTarget, StopTrackTargetFunc, error) {
-	tracked, err := track.NewTarget(gt, PullPromptDownloading, PullPromptPulled, ph.tty)
-	if err != nil {
-		return nil, nil, err
-	}
+	tracked := track.NewTarget(gt, ph.notifier)
 	ph.tracked = tracked
 	return tracked, tracked.Close, nil
 }
