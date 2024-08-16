@@ -17,7 +17,7 @@ data:
       "method" = {
         "type" = "jwt"
         "mount_path" = "auth/jwt/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}"
-        "namespace" = "nvcf"
+        "namespace" = "{{ .Values.vault.namespace }}"
         "config" = {
           "path" = "/var/run/secrets/kubernetes.io/serviceaccount-vault/token"
           "role" = "container-cache"
@@ -54,7 +54,7 @@ data:
       "method" = {
         "type" = "jwt"
         "mount_path" = "auth/jwt/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}"
-        "namespace" = "nvcf"
+        "namespace" = "{{ .Values.vault.namespace }}"
         "config" = {
           "path" = "/var/run/secrets/kubernetes.io/serviceaccount-vault/token"
           "role" = "container-cache"
@@ -79,7 +79,7 @@ data:
       }
       error_on_missing_key = true
     }
-    
+
     "vault" = {
       "address" = "{{ .Values.vault.vaultAddress }}"
     }
