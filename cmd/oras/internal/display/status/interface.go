@@ -21,6 +21,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
 )
 
 // StopTrackTargetFunc is the function type to stop tracking a target.
@@ -114,4 +115,10 @@ type BlobPushHandler interface {
 	OnBlobUploaded() error
 	StartTracking(gt oras.GraphTarget) (oras.GraphTarget, error)
 	StopTracking() error
+}
+
+// BlobFetchHandler handles the fetch command.
+type BlobFetchHandler interface {
+	StartReader(vr content.VerifyReader, descriptor ocispec.Descriptor) (content.VerifyReader, error)
+	StopReader()
 }

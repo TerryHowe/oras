@@ -168,7 +168,18 @@ type TTYCopyHandler struct {
 
 // NewTTYCopyHandler returns a new handler for copy command.
 func NewTTYCopyHandler(tty *os.File) CopyHandler {
-	return &TTYCopyHandler{
+	return &TTYCopyHandler{}
+}
+
+// TTYBlobFetchHandler handles tty status output for blob fetch events.
+type TTYBlobFetchHandler struct {
+	tty *os.File
+	tr  track
+}
+
+// NewTTYBlobFetchHandler returns a new handler for blob fetch command.
+func NewTTYBlobFetchHandler(tty *os.File) BlobFetchHandler {
+	return &TTYBlobFetchHandler{
 		tty: tty,
 	}
 }
@@ -409,4 +420,18 @@ func (bph *TTYBlobPushHandler) OnBlobUploading() error {
 // OnBlobUploaded implements BlobPushHandler.
 func (bph *TTYBlobPushHandler) OnBlobUploaded() error {
 	return nil
+}
+
+// StartReader starts a tracked reader from a verified target.
+func (bfh *TTYBlobFetchHandler) StartReader(vr content.VerifyReader, desc ocispec.Descriptor) (tr content.VerifyReader, err error) {
+	trackedReader, err := track.NewReader(vr, desc, "Downloading", "Downloaded ", bfh.tty)
+	trackedReader.Start()
+	bfh.tr = trackedReader
+	return bfh.tr, nil
+}
+
+// StopReader ends the tracking reader.
+func (bfh *TTYBlobFetchHandler) StopReader() {
+	defer trackedReader.StopManager()
+	trackedReader.Done()
 }

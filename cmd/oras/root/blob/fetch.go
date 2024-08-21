@@ -21,6 +21,8 @@ import (
 	"io"
 	"os"
 
+	"oras.land/oras/cmd/oras/internal/display"
+
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/spf13/cobra"
 	"oras.land/oras-go/v2"
@@ -28,10 +30,8 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras/cmd/oras/internal/argument"
 	"oras.land/oras/cmd/oras/internal/command"
-	"oras.land/oras/cmd/oras/internal/display/status/track"
 	oerrors "oras.land/oras/cmd/oras/internal/errors"
 	"oras.land/oras/cmd/oras/internal/option"
-	"oras.land/oras/internal/progress"
 )
 
 type fetchBlobOptions struct {
@@ -167,28 +167,16 @@ func (opts *fetchBlobOptions) doFetch(ctx context.Context, src oras.ReadOnlyTarg
 		writer = file
 	}
 
-	if opts.TTY == nil {
-		// none TTY output
-		if _, err = io.Copy(writer, vr); err != nil {
-			return ocispec.Descriptor{}, err
-		}
-	} else {
-		// TTY output
-		trackedReader, err := track.NewReader(vr, desc, "Downloading", "Downloaded ", opts.TTY)
-		if err != nil {
-			return ocispec.Descriptor{}, err
-		}
-		defer trackedReader.StopManager()
-		if err := progress.Start(trackedReader.Tracker()); err != nil {
-			return ocispec.Descriptor{}, err
-		}
-		if _, err = io.Copy(writer, trackedReader); err != nil {
-			return ocispec.Descriptor{}, err
-		}
-		if err := progress.Done(trackedReader.Tracker()); err != nil {
-			return ocispec.Descriptor{}, err
-		}
+	bfh := display.NewBlobFetchHandler(opts.TTY)
+	defer bfh.StopReader()
+	tr, err := bfh.StartReader(vr, desc)
+	if err != nil {
+		return ocispec.Descriptor{}, err
 	}
+	if _, err = io.Copy(writer, tr); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
 	if err := vr.Verify(); err != nil {
 		return ocispec.Descriptor{}, err
 	}

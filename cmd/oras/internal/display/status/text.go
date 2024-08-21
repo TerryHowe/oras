@@ -454,3 +454,22 @@ func (bph *TextBlobPushHandler) StartTracking(gt oras.GraphTarget) (oras.GraphTa
 func (bph *TextBlobPushHandler) StopTracking() error {
 	return nil
 }
+
+// TextBlobFetchHandler handles text status output for blob fetch events.
+type TextBlobFetchHandler struct {
+}
+
+// NewTextBlobFetchHandler returns a new handler for blob fetch command.
+func NewTextBlobFetchHandler() BlobFetchHandler {
+	return &TextBlobFetchHandler{}
+}
+
+// StartReader starts a tracked reader from a verified target.
+func (bfh *TextBlobFetchHandler) StartReader(vr content.VerifyReader, _ ocispec.Descriptor) (content.VerifyReader, error) {
+	return vr, nil
+}
+
+// StopReader ends the tracking reader.
+func (bfh *TextBlobFetchHandler) StopReader() {
+
+}

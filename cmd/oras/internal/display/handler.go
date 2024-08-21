@@ -298,3 +298,11 @@ func NewRepoListHandler(out io.Writer, format option.Format, registry, namespace
 	}
 	return handler, nil
 }
+
+// NewBlobFetchHandler returns blob fetcher handlers.
+func NewBlobFetchHandler(tty *os.File) status.BlobFetchHandler {
+	if tty == nil {
+		return status.NewTextBlobFetchHandler()
+	}
+	return status.NewTTYBlobFetchHandler(tty)
+}
