@@ -7,8 +7,8 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 # Sepcify labels for selecting node.
-nodeSelector: 
-  kubernetes.io/hostname: aks-gpu-95509207-vmss00000l
+nodeSelector:
+  node.kubernetes.io/instance-type: Standard_D64s_v3
 
 # Number of replicas to create of Container Cache.
 replicaCount: 1
@@ -95,11 +95,11 @@ vault:
   clusterName: getty
 
   # Vault Address (default: https://stg.vault.nvidia.com:443).
-  vaultAddress: https://stg.vault.nvidia.com:443
+  vaultAddress: https://stg.vault.nvidia.com
 
   # Node IP address of any node in the cluster.
   # This must be used in the client daemonset in the CONTAINER_CACHE_IP environment variable in the form "https://<vault.hostIP>:<service.Port>".
-  hostIP: 10.0.0.4
+  hostIP: 10.0.0.10
 
 nvcfRootCert: |
   -----BEGIN CERTIFICATE-----

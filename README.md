@@ -46,7 +46,7 @@ See [deploy](./deploy/) for container cache helm chart
 
     Use the below command to verify the deployment 
     ```
-    kubectl --namespace=container-caching get pod,daemonset,svc,deployment,secret,pvc --selector='app.kubernetes.io/name=nvcf-container-cache,app.kubernetes.io/instance=<helm-release-name>'
+    kubectl --namespace=container-caching get pod,daemonset,svc,deployment,secret,pvc --selector='app.kubernetes.io/name=nvcf-container-cache,app.kubernetes.io/instance=nvcf-container-cache'
 
     NAME                                     READY   STATUS    RESTARTS   AGE
     pod/nvcf-container-cache-nvmesh-nvcr-0   3/3     Running   0          10s
