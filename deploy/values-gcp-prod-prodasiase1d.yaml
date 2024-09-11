@@ -92,14 +92,14 @@ vault:
   clusterAccountName: dgxcloud-prod-gsc-asia-se1
 
   # Cluster Name (default: stage).
-  clusterName: prodasiase1c
+  clusterName: prodasiase1d
 
   # Vault Address (default: https://stg.vault.nvidia.com:443).
   vaultAddress: https://prod.vault.nvidia.com
 
   # Node IP address of any node in the cluster.
   # This must be used in the client daemonset in the CONTAINER_CACHE_IP environment variable in the form "https://<vault.hostIP>:<service.Port>".
-  hostIP: 10.0.64.67
+  hostIP: 10.0.96.12
 
 nvcfRootCert: |
   -----BEGIN CERTIFICATE-----
