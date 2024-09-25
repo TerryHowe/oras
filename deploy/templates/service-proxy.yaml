@@ -9,19 +9,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: nvcf-container-cache
+  name: nvcf-proxy-cache
   namespace: {{ $.Release.Namespace | quote }}
   labels:
     app: {{ $.Release.Name }}
     {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.service.type | default "ClusterIP" }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.service.port | default 30345 }}
-      {{ if eq .Values.service.type "NodePort" }}
-      nodePort: {{ .Values.service.port | default 30345 }}
-      {{ end }}
-      targetPort: https
-      name: https
+    - port: 443
+      targetPort: https-proxy
+      name: https-proxy
+      protocol: TCP
   selector:
     {{- include "nvcf-container-cache.selectorLabels" . | nindent 4 }}

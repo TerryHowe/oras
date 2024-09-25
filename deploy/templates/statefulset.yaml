@@ -26,10 +26,11 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-init-first: "false"  # should be injected last to pick up the CSR to get signed by Vault CA
         vault.hashicorp.com/agent-inject-status: update
         vault.hashicorp.com/agent-configmap: {{ $.Release.Name }}-vault-config
         vault.hashicorp.com/secret-volume-path: "/vault/secrets"
+        vault.hashicorp.com/agent-copy-volume-mounts: certs  #this copies all the mounts from the certs container and attaches to the injected vault container(s) both init and regular
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -44,23 +45,58 @@ spec:
         {{- toYaml $.Values.nodeSelector | nindent 8 }}
     {{- end }}
       initContainers:
-      - command:
-        - chown
-        - -R
-        - 1000:1000
-        - /container_cache
-        image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
-        name: init-chown-data
-        resources: {}
-        volumeMounts:
-        - name: cache
-          mountPath: /container_cache
-        securityContext:
-          capabilities:
+        - name: init-chown-data
+          image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+          command: [ "/bin/bash" ]
+          args:
+            - -c
+            - chown -R 1000:1000 /proxy_cache
+            - chown -R 1000:1000 /container_cache
+          resources: {}
+          volumeMounts:
+            - name: proxy-cache
+              mountPath: /proxy_cache
+            - name: cache
+              mountPath: /container_cache
+          securityContext:
+            capabilities:
               add:
-              - CHOWN
-          runAsNonRoot: false
-          runAsUser: 0
+                - CHOWN
+            runAsNonRoot: false
+            runAsUser: 0
+        - name: certs
+          image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+          command: [ "/bin/bash" ]
+          args:
+            - -c
+            - "openssl req -new -newkey rsa:4096 -nodes -keyout /certs/leaf-ca.key -out /certs/leaf-ca.csr -subj '/C=US/ST=California/L=Santa Clara/O=NVIDIA Corporation/OU=NVCF/CN=nvcf-proxy-leaf-ca' && chmod +r /certs/leaf-ca.key"
+          resources: { }
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+        - name: dump
+          image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+          command: [ "/bin/bash" ]
+          args:
+            - -c
+            - cat /etc/nginx/nginx.conf
+            - cat /etc/nginx/conf.d/sites/default.conf
+            - cat /etc/nginx/conf.d/sites/container-cache.conf
+            - cat /etc/nginx/conf.d/sites/proxy-cache.conf
+          resources: { }
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: nginx-default-config
+              mountPath: /etc/nginx/conf.d/sites/default.conf
+              subPath: default.conf
+            - name: nginx-container-config
+              mountPath: /etc/nginx/conf.d/sites/container-cache.conf
+              subPath: container-cache.conf
+            - name: nginx-proxy-config
+              mountPath: /etc/nginx/conf.d/sites/proxy-cache.conf
+              subPath: proxy-cache.conf
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
@@ -82,6 +118,9 @@ spec:
             - name: https
               containerPort: 13128
               protocol: TCP
+            - name: https-proxy
+              containerPort: 14128
+              protocol: TCP
             - name: cache-metrics
               containerPort: 9145
               protocol: TCP
@@ -96,11 +135,24 @@ spec:
           volumeMounts:
             - name: cache
               mountPath: /container_cache
+            - name: proxy-cache
+              mountPath: /proxy_cache
             - name: nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
+            - name: nginx-default-config
+              mountPath: /etc/nginx/conf.d/sites/default.conf
+              subPath: default.conf
+            - name: nginx-container-config
+              mountPath: /etc/nginx/conf.d/sites/container-cache.conf
+              subPath: container-cache.conf
+            - name: nginx-proxy-config
+              mountPath: /etc/nginx/conf.d/sites/proxy-cache.conf
+              subPath: proxy-cache.conf
             - name: token
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount-vault
+            - name: certs
+              mountPath: /etc/certs
         - name: nginx-prometheus-exporter
           image: {{ required "Property '.images.exporter' is required." $.Values.images.exporter | quote }}
           imagePullPolicy: IfNotPresent
@@ -118,7 +170,20 @@ spec:
                 audience: {{ .Values.vault.vaultAddress }}
         - name: nginx-config
           configMap: 
-            name: {{ $.Release.Name }}-config
+            name: nvcf-nginx-config
+        - name: nginx-default-config
+          configMap:
+            name: nvcf-default-config
+        - name: nginx-container-config
+          configMap:
+            name: nvcf-container-config
+        - name: nginx-proxy-config
+          configMap:
+            name: nvcf-proxy-config
+        - name: certs
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
   volumeClaimTemplates:
     - metadata:
         name: cache
@@ -128,4 +193,13 @@ spec:
         resources:
           requests:
             storage: {{ $.Values.persistentVolumeClaim.size | default "100Gi" | quote }}
+        storageClassName: {{ $.Values.persistentVolumeClaim.storageClassName | default "azurefile" | quote }}
+    - metadata:
+        name: proxy-cache
+        namespace: {{ $.Release.Namespace | quote }}
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ $.Values.persistentVolumeClaim.sizeProxy | default "100Gi" | quote }}
         storageClassName: {{ $.Values.persistentVolumeClaim.storageClassName | default "azurefile" | quote }}

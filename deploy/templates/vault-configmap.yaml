@@ -40,7 +40,7 @@ data:
       "source" = "/vault/configs/template.hcl"
       "destination" = "/vault/secrets/secrets_pkiCert.tmp"
       "exec" {
-        "command" = "cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain.pem > /vault/secrets/certs/nginx-proxy.pem && wget -O- http://127.0.0.1:13129/reload || echo"
+        "command" = "cat /vault/secrets/certs/nginx-intermediate.pem <(echo) /vault/secrets/certs/ca_chain_proxy.pem > /certs/ssl-bundle.crt && cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain_container.pem > /vault/secrets/certs/nginx-proxy.pem && wget -O- http://127.0.0.1:13129/reload || echo"
       }
       error_on_missing_key = true
     }
@@ -75,7 +75,7 @@ data:
       "source" = "/vault/configs/template.hcl"
       "destination" = "/vault/secrets/secrets_pkiCert.tmp"
       "exec" {
-        "command" = "cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain.pem > /vault/secrets/certs/nginx-proxy.pem"
+        "command" = "cat /vault/secrets/certs/nginx-intermediate.pem <(echo) /vault/secrets/certs/ca_chain_proxy.pem > /certs/ssl-bundle.crt && cat /vault/secrets/nginx-proxy.pem.tmp /vault/secrets/certs/ca_chain_container.pem > /vault/secrets/certs/nginx-proxy.pem"
       }
       error_on_missing_key = true
     }
@@ -86,10 +86,20 @@ data:
 
   template.hcl: |
     {{ "{{" }} with pkiCert `/cloud/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/services/container-cache/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}/pki/server/01/issue/server` `common_name=container-cache.container-caching.svc.cluster.local` `private_key_format=pkcs8` `ip_sans={{ .Values.vault.hostIP }}` {{ "}}" }}
-      {{ "{{" }} .Cert {{ "}}" }} {{ "{{" }} .CA {{ "}}" }} {{ "{{" }} .Key {{ "}}" }}
-      {{ "{{" }} .Key | writeToFile "/vault/secrets/certs/nginx-proxy.key" "" "" "0644" {{ "}}" }}
-      {{ "{{" }} .Cert | writeToFile "/vault/secrets/nginx-proxy.pem.tmp" "" "" "0644" {{ "}}" }}
+    {{ "{{" }} .Cert {{ "}}" }} {{ "{{" }} .CA {{ "}}" }} {{ "{{" }} .Key {{ "}}" }}
+    {{ "{{" }} .Key | writeToFile "/vault/secrets/certs/nginx-proxy.key" "" "" "0644" {{ "}}" }}
+    {{ "{{" }} .Cert | writeToFile "/vault/secrets/nginx-proxy.pem.tmp" "" "" "0644" {{ "}}" }}
     {{ "{{" }} end {{ "}}" }}
     {{ "{{" }} with secret `/cloud/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/services/container-cache/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}/pki/server/01/cert/ca_chain` {{ "}}" }}
-    {{ "{{" }} .Data.ca_chain | writeToFile "/vault/secrets/certs/ca_chain.pem" "" "" "0644" {{ "}}" }}
+    {{ "{{" }} .Data.ca_chain | writeToFile "/vault/secrets/certs/ca_chain_container.pem" "" "" "0644" {{ "}}" }}
+    {{ "{{" }} end {{ "}}" }}
+    {{ "{{" }} with secret `/cloud/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/services/proxy-cache/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}/pki/server/01/cert/ca_chain` {{ "}}" }}
+    {{ "{{" }} .Data.ca_chain | writeToFile "/vault/secrets/certs/ca_chain_proxy.pem" "" "" "0644" {{ "}}" }}
+    {{ "{{" }} end {{ "}}" }}
+    {{ "{{" }}  with $csrContents := file "/certs/leaf-ca.csr" {{ "}}" }}
+    {{ "{{" }}  with $arg := printf "csr=%s" $csrContents {{ "}}" }}
+    {{ "{{" }}  with secret `/cloud/{{ .Values.vault.clusterCSP }}/{{ .Values.vault.clusterAccountName }}/services/proxy-cache/regions/{{ .Values.vault.clusterRegion }}/{{ .Values.vault.clusterName }}/pki/server/01/root/sign-intermediate` $arg {{ "}}" }}
+    {{ "{{"}}  .Data.certificate |  writeToFile "/vault/secrets/certs/nginx-intermediate.pem" "" "" "0644" {{ "}}" }}
+    {{ "{{" }} end {{ "}}" }}
+    {{ "{{" }} end {{ "}}" }}
     {{ "{{" }} end {{ "}}" }}

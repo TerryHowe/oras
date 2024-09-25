@@ -9,7 +9,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $.Release.Name }}-config
+  name: nvcf-nginx-config
   namespace: {{ $.Release.Namespace | quote }}
   labels:
     app: {{ $.Release.Name }}
@@ -35,6 +35,11 @@ data:
         # Cache Metrics are updated at every log request processing phase.
         lua_shared_dict cache_metrics {{ $.Values.metrics.cacheMetricsStorageSize | default "10m" }};
 
+        lua_shared_dict certs_crt 32m;
+        lua_shared_dict certs_crl 32m;
+        lua_shared_dict certs_key 1m;
+        init_by_lua_file /etc/nginx/conf.d/lua/lua-gen-key.lua;
+
         # Cache Metrics
         init_worker_by_lua_block {
             prometheus = require("prometheus").init("cache_metrics")
@@ -50,30 +55,21 @@ data:
             
             cache_throughput = prometheus:histogram(
                 "container_cache_throughput", "Throughput of container cache(bytes/msec)", {"cache_status", "http_status"}, { {{ $.Values.metrics.throughputHistogramBuckets | default "25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000" }} })
+
+            proxy_http_request_time_ms_total = prometheus:counter(
+                "proxy_cache_http_requests_time_ms_total", "Sum of time elapsed between reading the first bytes from the client and writing a log entry after the last bytes were sent for each request", {"request_uri", "cache_status", "client_ip", "http_status"})
+
+            proxy_http_requests_count = prometheus:counter(
+                "proxy_cache_http_requests_count", "Count of requests with additional labels", {"request_uri", "cache_status", "client_ip", "http_status"})
+
+            proxy_response_body_size = prometheus:gauge(
+                "proxy_cache_response_body_size_bytes", "Number of bytes sent to client, not counting the response header", {"request_uri", "cache_status", "client_ip", "http_status"})
+
+            proxy_cache_throughput = prometheus:histogram(
+                "proxy_cache_throughput", "Throughput of proxy cache(bytes/msec)", {"cache_status", "http_status"}, { {{ $.Values.metrics.throughputHistogramBuckets | default "25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000" }} })
+
         }
 
-        log_by_lua_block {
-            local cache_status = ngx.var.upstream_cache_status 
-            local request_uri = ngx.var.request_uri
-            local body_size = ngx.var.body_bytes_sent
-            local remote_addr = ngx.var.remote_addr
-            local request_time = ngx.var.request_time
-            local http_status = ngx.var.status
-            if request_uri ~= nil and cache_status ~= nil and remote_addr ~= nil and not string.find(request_uri, "manifest") then
-                if request_time ~= nil then
-                    http_request_time_ms_total:inc(tonumber(request_time), {request_uri, cache_status, remote_addr, http_status})
-                    http_requests_count:inc(1, {request_uri, cache_status, remote_addr, http_status})
-
-                    if body_size ~= nil then
-                        cache_throughput:observe(tonumber(body_size) / tonumber(request_time), {cache_status, http_status})
-                    end
-                end
-
-                if body_size ~= nil then
-                    response_body_size:set(tonumber(body_size), {request_uri, cache_status, remote_addr, http_status})
-                end
-            end
-        }
         
         # Logging Configuration
         log_format main escape=json
@@ -101,269 +97,14 @@ data:
             # '"http_authorization":"$http_authorization",' # Keep Auth out of the logs unless debugging
         '}';
 
-        # Timeout Configuration
-        keepalive_timeout  300s;
-        send_timeout 60s;
-        client_body_timeout 60s;
-        client_header_timeout 60s;
-
-        proxy_read_timeout 60s;
-        proxy_send_timeout 60s;
 
         gzip off;
         # Configure cache size and Path
-        proxy_cache_path /container_cache levels=1:2 max_size={{ $.Values.cache.maxSize | default "80g" }} inactive={{ $.Values.cache.valid | default "60d" }} keys_zone=cache:{{ $.Values.cache.keyStorageSize | default "10m" }} use_temp_path=off;
+        proxy_cache_path /container_cache levels=1:2 max_size={{ $.Values.cache.maxSize | default "80g" }} inactive={{ $.Values.cache.valid | default "60d" }} keys_zone=container:{{ $.Values.cache.keyStorageSize | default "10m" }} use_temp_path=off;
+        proxy_cache_path /proxy_cache levels=1:2 max_size={{ $.Values.cache.maxSize | default "80g" }} inactive={{ $.Values.cache.valid | default "60d" }} keys_zone=proxy_cache:{{ $.Values.cache.keyStorageSize | default "10m" }} use_temp_path=off;
 
-        # The caching layer
-        server {
-            # Listen on 13128, for all hostnames.
-            listen 13128 ssl default_server;
-            server_name proxy_caching_;
+        include /etc/nginx/conf.d/sites/default.conf;
+        include /etc/nginx/conf.d/sites/container-cache.conf;
+        include /etc/nginx/conf.d/sites/proxy-cache.conf;
 
-            set $disable_cache "3"; # Auth check yet to be performed
-
-            # Hide/ignore headers from caching. S3 especially likes to send Expires headers in the past in some situations.
-            proxy_hide_header      Set-Cookie;
-            proxy_ignore_headers   X-Accel-Expires Expires Cache-Control Set-Cookie;
-
-            # Logging config
-            access_log  /var/log/nginx/access.log main;
-
-            # Target Host config
-            set $docker_proxy_request_type "unknown";
-            set $target_host {{ $.Values.targetHost | default "nvcr.io" }};
-
-            # Send upstream status as header
-            add_header X-Docker-Registry-Proxy-Cache-Upstream-Status "$upstream_cache_status";
-
-            # Use Generated certs
-            ssl_certificate /vault/secrets/certs/nginx-proxy.pem;
-            ssl_certificate_key /vault/secrets/certs/nginx-proxy.key;
-            
-            # local=on only works with openresty
-            resolver local=on ipv6=off;
-
-            chunked_transfer_encoding on;
-            # Only GET from the Cache
-            if ($request_method = POST) {
-                return 405 "POST method is not allowed";
-            }
-            if ($request_method = PUT) {
-                return 405 "PUT method is not allowed";
-            }
-            if ($request_method = DELETE) {
-                return 405  "DELETE method is not allowed";
-            }
-
-            # If the request is for a /forcecache redirect, then we need to handle it specially.
-            proxy_read_timeout 900;
-
-            # Use cache locking
-            # This forces additional requests to wait to be served through the cache
-            # until the first request for the same resource is completed, helping cut bandwidth costs.
-            proxy_cache_lock on;
-            proxy_cache_lock_timeout 880s;
-
-            # Some extra settings to maximize cache hits and efficiency
-            proxy_force_ranges on;
-            proxy_ignore_client_abort on;
-            proxy_cache_revalidate on;
-            
-            # Use SNI during the TLS handshake with the upstream.
-            proxy_ssl_server_name on;
-
-            # Verify SSL certs, and use the system CA bundle.
-            proxy_ssl_verify on;
-            proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
-            proxy_ssl_verify_depth 2;
-            proxy_ssl_session_reuse off;
-            proxy_cache_valid 200 206 {{ $.Values.cache.valid | default "60d" }};
-
-            # Lua SSL config
-            lua_ssl_verify_depth 2;
-            lua_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
-
-            # For blob requests by digest, do cache, and treat redirects.
-            location ~ ^/v2/(.*)/blobs/sha256:(.*) {
-                # Validate credentials before serving blobs.
-                set $disable_cache "1"; # disabled to serve from cache by default
-                access_by_lua_block {
-                    local http = require "resty.http"
-                    local httpc = http.new()
-                    local res, err = httpc:request_uri("https://" .. ngx.var.target_host, {
-                        method = "HEAD",
-                        headers = {
-                            ["Authorization"] = ngx.var.http_authorization
-                        }
-                    })
-                    
-                    if res and res.status == 200 then
-                        ngx.log(ngx.INFO, "Credentials validated successfully.")
-                        ngx.var.disable_cache = "0"; 
-                    else
-                        ngx.log(ngx.INFO, "Invalid credentials.")
-                    end
-                }
-
-                proxy_cache_bypass $disable_cache;
-                set $docker_proxy_request_type "blob-by-digest";
-                proxy_pass https://$target_host;
-                proxy_set_header Host $target_host;
-                add_header X-Docker-Registry-Proxy-Cache-Upstream-Status "$upstream_cache_status";
-                add_header X-Docker-Registry-Proxy-Cache-Type "$docker_proxy_request_type";
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_cache cache;
-                proxy_cache_key   $uri;
-                proxy_intercept_errors on;
-                
-                # enables revalidation of expired cached responses using conditional GET requests.
-                proxy_cache_revalidate on;
-                # allows serving stale content from the cache while Nginx is updating the cache in the background.
-                proxy_cache_use_stale updating; 
-                error_page 301 302 307 = @handle_redirects;
-            }
-
-            # For manifest requests by digest, do cache, and treat redirects.
-            location ~ ^/v2/(.*)/manifests/sha256:(.*) {
-                # Validate credentials before serving manifests.
-                set $disable_cache "1"; # disabled to serve from cache by default
-                access_by_lua_block {
-                    local http = require "resty.http"
-                    local httpc = http.new()
-                    local res, err = httpc:request_uri("https://" .. ngx.var.target_host, {
-                        method = "HEAD",
-                        headers = {
-                            ["Authorization"] = ngx.var.http_authorization
-                        }
-                    })
-                    
-                    if res and res.status == 200 then
-                        ngx.log(ngx.INFO, "Credentials validated successfully.")
-                        ngx.var.disable_cache = "0"
-                    else
-                        ngx.log(ngx.INFO, "Invalid credentials.")
-                    end
-                }
-
-                set $docker_proxy_request_type "manifest-by-digest";
-                add_header X-Docker-Registry-Proxy-Cache-Upstream-Status "$upstream_cache_status";
-                add_header X-Docker-Registry-Proxy-Cache-Type "$docker_proxy_request_type";
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_pass https://$target_host;
-                proxy_set_header Host $target_host;
-                proxy_cache cache;
-                proxy_cache_key $uri;
-                proxy_intercept_errors on;
-                error_page 301 302 307 = @handle_redirects;
-            }
-
-            location ~ ^/v2/(.*)/manifests/ {
-                set $docker_proxy_request_type "manifest-caching-disabled";
-                proxy_pass https://$target_host;
-                proxy_set_header Host $target_host;
-                proxy_set_header Authorization $http_authorization;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                # Do not Cache Manifests
-                proxy_cache off;
-            }
-
-            # Cache blobs requests that are not by digest
-            # Since these are mutable, we invalidate them immediately and keep them only in case the backend is down
-            location ~ ^/v2/(.*)/blobs/ {
-                set $docker_proxy_request_type "blob-mutable";
-                proxy_cache_valid 0s;
-                proxy_pass https://$target_host;
-                proxy_set_header Host $target_host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                # Cache blobs
-                proxy_cache cache;
-                # enables revalidation of expired cached responses using conditional GET requests.
-                proxy_cache_revalidate on;
-                # allows serving stale content from the cache while Nginx is updating the cache in the background.
-                proxy_cache_use_stale updating; 
-                proxy_cache_use_stale  error timeout http_500 http_502 http_504 http_429; 
-            }
-
-            location @handle_redirects {
-                set $docker_proxy_request_type "handle-redirect";
-                set $original_uri $uri;
-                set $orig_loc $upstream_http_location;
-                proxy_set_header Authorization "";
-                proxy_pass $orig_loc;
-                proxy_cache cache;
-                proxy_cache_key $original_uri;
-            }
-
-            location / {
-                proxy_set_header Authorization $http_authorization;
-                proxy_set_header Host $target_host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_cache off;
-                proxy_pass https://$target_host;
-            }
-        }
-
-        # Health check
-        server {
-            listen 13129;
-            access_log  off;
-            # Health check endpoint
-            location /healthz {
-                add_header Content-Type text/plain;
-                return 200 "The Container Caching Proxy is running!";
-            }
-
-            # reload nginx
-            location /reload {
-                allow 127.0.0.1;
-                deny all;
-                content_by_lua_block {
-                    local resty_signal = require "resty.signal"
-                    local file, err = io.open("/var/run/nginx.pid", "r")
-                    if file == nil then
-                        ngx.status = 500
-                        ngx.say("Failed to reload nginx process: ", err)
-                        ngx.exit(ngx.status)
-                    end
-                    local pid = file:read("*n")
-                    file:close()
-                    ngx.say("Nginx PID", pid)
-                    ngx.say("Reloading nginx", pid)
-                    local ok, err = resty_signal.kill(pid, "HUP")
-                    if not ok then
-                        ngx.log(ngx.ERR, "failed to reload nginx process of pid ", pid, ": ", err)
-                        ngx.say("Failed to reload nginx process: ", err)
-                        ngx.status = 500
-                        ngx.exit(ngx.status)
-                    end
-                }
-            }
-        }
-
-        # Metrics
-        server {
-            listen 9145;
-            access_log off;
-            location /cache_metrics {
-                content_by_lua_block {
-                    prometheus:collect()
-                }
-            }
-
-            location /nginx_status {
-                stub_status on;
-                allow 127.0.0.1;
-                deny all;
-            }
-        }
     }

@@ -19,7 +19,8 @@ targetHost: nvcr.io
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
-  server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
+  #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
@@ -27,7 +28,7 @@ images:
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
     # The name of the Kubernetes secret to be used (NOT the secret itself).
-    - ngc-container-pull
+    - nvcr-regcred
 
 # Configuration options related to how Container Cache is configured.
 cache:
@@ -54,6 +55,9 @@ persistentVolumeClaim:
 
   # Name of storage class for persistent volume claim (default: azurefile )
   storageClassName: nvcf-cc-sc
+
+  # Size of persistent volume for proxy cache (default: 200Gi)
+  sizeProxy: 200Gi
 
 # Configuration options related to how Container Cache Service is configured.
 service:
