@@ -16,6 +16,7 @@ limitations under the License.
 package track
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -43,6 +44,8 @@ type reader struct {
 
 // NewReader returns a new reader with tracked progress.
 func NewReader(r io.Reader, descriptor ocispec.Descriptor, actionPrompt string, donePrompt string, tty *os.File) (Reader, error) {
+	fmt.Println("************* NewReader")
+	fmt.Println(donePrompt)
 	manager, err := progress.NewManager(tty)
 	if err != nil {
 		return nil, err
@@ -66,6 +69,8 @@ func (r *reader) StopManager() {
 
 // Done sends message to mark the tracked progress as complete.
 func (r *reader) Done() {
+	fmt.Println("************* Done")
+	fmt.Println(r.donePrompt)
 	r.messenger.Send(r.donePrompt, r.descriptor, r.descriptor.Size)
 	r.messenger.Stop()
 }

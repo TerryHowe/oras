@@ -17,6 +17,7 @@ package track
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 
@@ -47,6 +48,9 @@ type referenceGraphTarget struct {
 
 // NewTarget creates a new tracked Target.
 func NewTarget(t oras.GraphTarget, actionPrompt, donePrompt string, tty *os.File) (GraphTarget, error) {
+	fmt.Println("*************")
+	fmt.Println(donePrompt)
+	fmt.Println(tty)
 	manager, err := progress.NewManager(tty)
 	if err != nil {
 		return nil, err
@@ -76,6 +80,9 @@ func (t *graphTarget) Mount(ctx context.Context, desc ocispec.Descriptor, fromRe
 
 // Push pushes the content to the base oras.GraphTarget with tracking.
 func (t *graphTarget) Push(ctx context.Context, expected ocispec.Descriptor, content io.Reader) error {
+	fmt.Println("************* t PsuhReference")
+	fmt.Println(t.donePrompt)
+	fmt.Println(t.tty)
 	r, err := NewReader(content, expected, t.actionPrompt, t.donePrompt, t.tty)
 	if err != nil {
 		return err
@@ -91,6 +98,9 @@ func (t *graphTarget) Push(ctx context.Context, expected ocispec.Descriptor, con
 
 // PushReference pushes the content to the base oras.GraphTarget with tracking.
 func (rgt *referenceGraphTarget) PushReference(ctx context.Context, expected ocispec.Descriptor, content io.Reader, reference string) error {
+	fmt.Println("************* PsuhReference")
+	fmt.Println(rgt.donePrompt)
+	fmt.Println(rgt.tty)
 	r, err := NewReader(content, expected, rgt.actionPrompt, rgt.donePrompt, rgt.tty)
 	if err != nil {
 		return err
@@ -101,7 +111,9 @@ func (rgt *referenceGraphTarget) PushReference(ctx context.Context, expected oci
 	if err != nil {
 		return err
 	}
+	fmt.Println("************* PsuhReference calling done")
 	r.Done()
+	fmt.Println("************* PsuhReference done")
 	return nil
 }
 
