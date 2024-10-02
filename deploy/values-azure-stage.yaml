@@ -20,7 +20,7 @@ targetHost: nvcr.io
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
   #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
-  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.3
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
@@ -28,7 +28,7 @@ images:
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
     # The name of the Kubernetes secret to be used (NOT the secret itself).
-    - nvcr-regcred
+    - balaji-cred
 
 # Configuration options related to how Container Cache is configured.
 cache:
@@ -105,6 +105,10 @@ vault:
   # This must be used in the client daemonset in the CONTAINER_CACHE_IP environment variable in the form "https://<vault.hostIP>:<service.Port>".
   hostIP: 10.0.0.10
 
+# Certificate hash is calculated by copying the nvcrRootCert contents to a
+# regular text file and running the following command
+# openssl x509 -hash -noout -in $file
+nvcfRootCertHash: "8e48496b.0"
 nvcfRootCert: |
   -----BEGIN CERTIFICATE-----
   MIIGpTCCBI2gAwIBAgIUWoUMzmHB4HpEgAZ5DvsoLVWgnP4wDQYJKoZIhvcNAQEL

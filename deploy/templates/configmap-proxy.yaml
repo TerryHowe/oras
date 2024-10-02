@@ -52,6 +52,9 @@ data:
         # it to S3. We need to forward this header to S3 for Signature verification to work. The block of code
         # below is a WAR for the If-Match requirement.
 
+        slice 4m;
+        proxy_set_header Range $slice_range;
+
         set_by_lua_block $filtered_args {
           local args = ngx.req.get_uri_args()
           local filtered = {}
@@ -65,19 +68,10 @@ data:
           return ngx.encode_args(filtered)
         }
 
-        set_by_lua_block $renamed_if_match {
-          local headers = ngx.req.get_headers()
-          return headers["If-Match"]
-        }
-        rewrite_by_lua_block {
-          ngx.req.clear_header("If-Match")
-        }
-
         # Listen on 14128, for all hostnames.
         listen 14128 ssl default_server reuseport;
         server_name ~^(?<bucket_name>[^\.]+)(\.s3(\.(?<bucket_region>[^\.]+))?)?\.amazonaws\.com$;
         proxy_cache proxy_cache;
-        proxy_cache_key $request_method$scheme$proxy_host$request_uri$http_range;
 
         ssl_verify_client optional;
         proxy_ssl_protocols TLSv1.3;
@@ -116,13 +110,8 @@ data:
         proxy_cache_revalidate on;
         add_header X-Cache-Status $upstream_cache_status;
 
-        # Hide/ignore headers from caching. S3 especially likes to send Expires headers in the past in some situations.
-        proxy_hide_header      Set-Cookie;
-        proxy_ignore_headers   X-Accel-Expires Expires Cache-Control Set-Cookie;
-
         # Logging config
         access_log /dev/stdout main;
-
 
         # local=on only works with openresty
         resolver local=on ipv6=off;
@@ -149,23 +138,20 @@ data:
         # Lua SSL config
         lua_ssl_verify_depth 2;
 
-        location  ~ ^(.*).amazonaws.com/(.*) {
-          #server_name ~^(?<bucket_name>[^\.]+)(\.s3(\.(?<bucket_region>[^\.]+))?)?\.amazonaws\.com$;
-          proxy_cache_key $bucket_region$bucket_name$request_method$uri$arg_versionId$filtered_args;
+        location  / {
+          proxy_pass_request_headers on;
+
+          # Configures cache bypass based on the Cache-Control header.
+          if ($http_cache_control ~* "no-cache") {
+            set $disable_cache "1";
+          }
+
+          proxy_cache_bypass $disable_cache;
+          proxy_set_header If-Match $http_if_match;
+
+          proxy_cache_key $bucket_region|$bucket_name|$request_method|$uri|$arg_versionId|$http_if_match|$filtered_args|$slice_range;
           access_by_lua_file /etc/nginx/conf.d/lua/lua-access.lua;
           proxy_set_header Host $host;
-          proxy_set_header Range $http_range;
-          proxy_set_header If-Match $renamed_if_match;
           proxy_pass $scheme://$host;
         }
-
-        location  / {
-          #server_name nvcf_proxy_cache_
-          proxy_cache_key $request_method$scheme$proxy_host$request_uri$http_range;
-          proxy_set_header Host $host;
-          proxy_set_header Range $http_range;
-          proxy_pass $scheme://$host;
-        }
-
-
     }
