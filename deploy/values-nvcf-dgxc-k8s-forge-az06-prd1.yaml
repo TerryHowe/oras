@@ -95,7 +95,7 @@ vault:
   clusterAccountName: dgxc-k8s-forge
 
   # Cluster Name (default: stage).
-  clusterName: dgxc-forge-az06-prd1
+  clusterName: nvcf-dgxc-forge-az06-prd1
 
   # Vault Address (default: https://stg.vault.nvidia.com:443).
   vaultAddress: https://prod.vault.nvidia.com
