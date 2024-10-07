@@ -7,8 +7,9 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 # Sepcify labels for selecting node.
-nodeSelector: 
-  node.kubernetes.io/instance-type: cpu
+nodeSelector:
+  nodeGroup: monitoring
+
 
 # Number of replicas to create of Container Cache.
 replicaCount: 2

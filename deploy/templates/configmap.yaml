@@ -33,7 +33,7 @@ data:
         default_type  application/octet-stream;
 
         # Cache Metrics are updated at every log request processing phase.
-        lua_shared_dict cache_metrics {{ $.Values.metrics.cacheMetricsStorageSize | default "10m" }};
+        lua_shared_dict cache_metrics {{ $.Values.metrics.cacheMetricsStorageSize | default "32m" }};
 
         lua_shared_dict certs_crt 32m;
         lua_shared_dict certs_crl 32m;
