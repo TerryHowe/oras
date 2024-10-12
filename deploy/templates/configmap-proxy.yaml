@@ -31,10 +31,12 @@ data:
             local remote_addr = ngx.var.remote_addr
             local request_time = ngx.var.request_time
             local http_status = ngx.var.status
+            local request_method = ngx.var.request_method
+            local upstream_time = ngx.var.$upstream_response_time
             if request_uri ~= nil and cache_status ~= nil and remote_addr ~= nil and not string.find(request_uri, "manifest") then
                 if request_time ~= nil then
-                    proxy_http_request_time_ms_total:inc(tonumber(request_time), {request_uri, cache_status, remote_addr, http_status})
-                    proxy_http_requests_count:inc(1, {request_uri, cache_status, remote_addr, http_status})
+                    proxy_http_request_time_ms_total:inc(tonumber(request_time), {request_method, cache_status, http_status})
+                    proxy_http_requests_count:inc(1, {request_method, cache_status, http_status})
 
                     if body_size ~= nil then
                         proxy_cache_throughput:observe(tonumber(body_size) / tonumber(request_time), {cache_status, http_status})
@@ -42,7 +44,7 @@ data:
                 end
 
                 if body_size ~= nil then
-                    proxy_response_body_size:set(tonumber(body_size), {request_uri, cache_status, remote_addr, http_status})
+                    proxy_response_body_size:set(tonumber(body_size), {cache_status, http_status})
                 end
             end
         }
