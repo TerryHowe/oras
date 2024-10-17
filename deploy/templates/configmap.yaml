@@ -18,14 +18,16 @@ data:
   nginx.conf: |-
     user  nvs;
     worker_processes  auto;
-    error_log  /var/log/nginx/error.log info;
+    error_log  /var/log/nginx/error.log warn;
 
     pid        /var/run/nginx.pid;
 
     events {  
         # TODO: In staging, run grep processor /proc/cpuinfo | wc -l and calculate a better max
         # https://serverfault.com/questions/787919/optimal-value-for-nginx-worker-connections
-        worker_connections  10000; 
+        worker_connections  1024;
+        multi_accept                    on;
+        use epoll;
     }
 
     http {
@@ -67,6 +69,12 @@ data:
 
             proxy_cache_throughput = prometheus:histogram(
                 "proxy_cache_throughput", "Throughput of proxy cache(bytes/msec)", {"cache_status", "http_status"}, { {{ $.Values.metrics.throughputHistogramBuckets | default "25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000" }} })
+            proxy_cache_upstream_throughput = prometheus:histogram(
+                "proxy_cache_upstream_throughput", "Throughput of upstream server(bytes/msec)", {"host", "http_status"}, { {{ $.Values.metrics.throughputHistogramBuckets | default "25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000" }} })
+            metric_latency = prometheus:histogram("proxy_cache_request_duration_seconds", "HTTP request latency", {"host", "request_method", "cache_status", "http_status"}, {0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 10})
+            metric_upstream_latency = prometheus:histogram("proxy_cache_upstream_request_duration_seconds", "HTTP request latency", {"host", "request_method", "cache_status", "http_status"}, {0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 10})
+            metric_connections = prometheus:gauge("nginx_http_connections", "Number of HTTP connections", {"state"})
+            metric_response_sizes = prometheus:histogram("proxy_cache_response_size_bytes", "Size of HTTP responses", nil,{1000,2000,4000,8000,16000,32000,64000,128000,256000,1048576, 10485760, 104857600, 1000000000, 10000000000, 100000000000})
         }
 
         
@@ -100,7 +108,7 @@ data:
         gzip off;
         # Configure cache size and Path
         proxy_cache_path /container_cache levels=1:2 max_size={{ $.Values.cache.maxSize | default "80g" }} inactive={{ $.Values.cache.valid | default "60d" }} keys_zone=container:{{ $.Values.cache.keyStorageSize | default "10m" }} use_temp_path=off;
-        proxy_cache_path /proxy_cache levels=1:2 max_size={{ $.Values.cache.maxSize | default "80g" }} inactive={{ $.Values.cache.valid | default "60d" }} keys_zone=proxy_cache:{{ $.Values.cache.keyStorageSize | default "10m" }} use_temp_path=off;
+        proxy_cache_path /proxy_cache levels=1:2 max_size={{ $.Values.cache.maxSize | default "80g" }} inactive={{ $.Values.cache.valid | default "1d" }} keys_zone=proxy_cache:{{ $.Values.cache.keyStorageSize | default "10m" }} use_temp_path=off;
 
         include /etc/nginx/conf.d/sites/default.conf;
         include /etc/nginx/conf.d/sites/container-cache.conf;
