@@ -45,7 +45,7 @@ cache:
 
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  valid: 30d
+  valid: 1d
 
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
@@ -102,7 +102,7 @@ vault:
 
   # Node IP address of any node in the cluster.
   # This must be used in the client daemonset in the CONTAINER_CACHE_IP environment variable in the form "https://<vault.hostIP>:<service.Port>".
-  hostIP: 10.45.224.146
+  hostIP: 10.45.184.199
 
 # Certificate hash is calculated by copying the nvcrRootCert contents to a
 # regular text file and running the following command
