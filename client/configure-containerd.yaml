@@ -15,6 +15,7 @@ data:
   # The nginx_proxy.crt file is the root certificate for the NVCF Staging environment.
   # You can get this by `curl http://crls-stg.vpki.nvidia.com/his3/mtk3n2i5ntk2ytjm/ca/pem`.
   # This should change based on the environment you are using.
+  # `curl http://crls.vpki.nvidia.com/mbhj/mtk3n2i5ntk2ytjm/ca/pem` . for production
   nginx_container_cache.crt: |
     -----BEGIN CERTIFICATE-----
     MIIGpTCCBI2gAwIBAgIUWoUMzmHB4HpEgAZ5DvsoLVWgnP4wDQYJKoZIhvcNAQEL

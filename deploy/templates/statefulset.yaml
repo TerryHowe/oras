@@ -50,8 +50,7 @@ spec:
           command: [ "/bin/bash" ]
           args:
             - -c
-            - chown -R 1000:1000 /proxy_cache
-            - chown -R 1000:1000 /container_cache
+            - "chown -R 1000:1000 /proxy_cache && chown -R 1000:1000 /container_cache"
           resources: {}
           volumeMounts:
             - name: proxy-cache
@@ -74,29 +73,6 @@ spec:
           volumeMounts:
             - name: certs
               mountPath: /certs
-        - name: dump
-          image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
-          command: [ "/bin/bash" ]
-          args:
-            - -c
-            - cat /etc/nginx/nginx.conf
-            - cat /etc/nginx/conf.d/sites/default.conf
-            - cat /etc/nginx/conf.d/sites/container-cache.conf
-            - cat /etc/nginx/conf.d/sites/proxy-cache.conf
-          resources: { }
-          volumeMounts:
-            - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-            - name: nginx-default-config
-              mountPath: /etc/nginx/conf.d/sites/default.conf
-              subPath: default.conf
-            - name: nginx-container-config
-              mountPath: /etc/nginx/conf.d/sites/container-cache.conf
-              subPath: container-cache.conf
-            - name: nginx-proxy-config
-              mountPath: /etc/nginx/conf.d/sites/proxy-cache.conf
-              subPath: proxy-cache.conf
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000

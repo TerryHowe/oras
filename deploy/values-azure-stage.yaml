@@ -14,7 +14,7 @@ nodeSelector:
 replicaCount: 1
 
 # Domain of target Host where the proxy passes the request to (default: nvcr.io).
-targetHost: nvcr.io
+targetHost: stg.nvcr.io
 
 # Container image information used by Container Cache.
 images:
