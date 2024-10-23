@@ -12,7 +12,7 @@ metadata:
   name: nvcf-proxy-cache
   namespace: {{ $.Release.Namespace | quote }}
   labels:
-    app: {{ $.Release.Name }}
+    app: nvcf-proxy-cache
     {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
