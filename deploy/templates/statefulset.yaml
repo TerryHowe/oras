@@ -45,6 +45,16 @@ spec:
       nodeSelector:
         {{- toYaml $.Values.nodeSelector | nindent 8 }}
     {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - nvcf-proxy-cache
+            topologyKey: kubernetes.io/hostname
       initContainers:
         - name: init-chown-data
           image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
