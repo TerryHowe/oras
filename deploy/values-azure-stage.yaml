@@ -49,7 +49,7 @@ cache:
 
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  valid: 1s
+  valid: 1d
 
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
