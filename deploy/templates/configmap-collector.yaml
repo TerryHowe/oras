@@ -6,9 +6,14 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
-apiVersion: v2
-name: nvcf-container-cache
-description: NVCF Container Cache Helm Chart for Kubernetes
-type: application
-version: 0.0.4
-appVersion: "1.2.1"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvcf-collector-config
+  namespace: {{ $.Release.Namespace | quote }}
+  labels:
+    app: {{ $.Release.Name }}
+    {{- include "nvcf-container-cache.labels" . | nindent 4 }}
+data:
+  config.yaml: |-
+    {{- tpl (.Files.Get "files/otel-collector-config.yaml") . | nindent 4 }}

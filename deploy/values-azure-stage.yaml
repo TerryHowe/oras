@@ -20,10 +20,13 @@ targetHost: stg.nvcr.io
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
   #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
-  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.5
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.2.1
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
+
+  # Name of the container image containing OpenTelemetry Collector.
+  collector: otel/opentelemetry-collector-contrib:0.112.0
 
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
@@ -46,7 +49,7 @@ cache:
 
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  valid: 1d
+  valid: 1s
 
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
@@ -77,6 +80,13 @@ metrics:
   # Bucket configuration for the throughput histogram (default: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000).
   # Must be a comma-separated list of positive integers.
   throughputHistogramBuckets: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000
+
+# Configuration options related to how Container Cache Traces are configured.
+traces:
+  # OpenTelemetry-Collector configuration.
+  collector:
+    # OpenTelemetry endpoint to send traces to.
+    endpoint: "stg.otel.kaizen.nvidia.com:8282"
 
 # Custom annotations to be added to the pod.
 podAnnotations: {}

@@ -140,6 +140,21 @@ spec:
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount-vault
             - name: certs
               mountPath: /etc/certs
+        - name: opentelemetry-collector
+          image: {{ required "Property '.images.collector' is required." $.Values.images.collector | quote }}
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: otel-collector-access-token
+          volumeMounts:
+            - name: nvcf-collector-config
+              mountPath: /etc/otelcol-contrib/config.yaml
+              subPath: config.yaml
+          ports:
+            - name: grpc
+              containerPort: 4317
+            - name: http
+              containerPort: 4318
         - name: nginx-prometheus-exporter
           image: {{ required "Property '.images.exporter' is required." $.Values.images.exporter | quote }}
           imagePullPolicy: IfNotPresent
@@ -167,6 +182,9 @@ spec:
         - name: nginx-proxy-config
           configMap:
             name: nvcf-proxy-config
+        - name: nvcf-collector-config
+          configMap:
+            name: nvcf-collector-config
         - name: certs
           emptyDir:
             medium: Memory
