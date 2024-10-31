@@ -1,3 +1,5 @@
+{{- if (.Values.traces).enabled }}
+---
 # Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
@@ -17,3 +19,4 @@ metadata:
 data:
   config.yaml: |-
     {{- tpl (.Files.Get "files/otel-collector-config.yaml") . | nindent 4 }}
+{{- end }}

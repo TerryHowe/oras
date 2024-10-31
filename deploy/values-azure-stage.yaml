@@ -83,6 +83,8 @@ metrics:
 
 # Configuration options related to how Container Cache Traces are configured.
 traces:
+  # Enable tracing
+  enabled: true
   # OpenTelemetry-Collector configuration.
   collector:
     # OpenTelemetry endpoint to send traces to.
