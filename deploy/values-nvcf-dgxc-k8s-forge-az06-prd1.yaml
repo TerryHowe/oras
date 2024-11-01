@@ -12,7 +12,7 @@ nodeSelector:
 
 
 # Number of replicas to create of Container Cache.
-replicaCount: 2
+replicaCount: 6
 
 # Domain of target Host where the proxy passes the request to (default: nvcr.io).
 targetHost: nvcr.io
@@ -38,20 +38,20 @@ cache:
 
   # Max size of the cache (default: 80g).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
-  maxSize: 500g
+  maxSize: 100g
 
   # Period a resource can remain in the cache without being accessed (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  inactive: 60d
+  inactive: 1d
 
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  valid: 30d
+  valid: 1d
 
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
   # Size of persistent volume (default: 100Gi )
-  size: 500Gi
+  size: 50Gi
 
   # Name of storage class for persistent volume claim (default: azurefile )
   storageClassName: nvcf-cc-sc
