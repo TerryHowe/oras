@@ -48,6 +48,7 @@ cache:
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   valid: 1d
 
+
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
   # Size of persistent volume (default: 100Gi )
