@@ -48,6 +48,18 @@ cache:
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   valid: 1d
 
+  # httpStatus responses to cache
+  httpStatus: "200 206 404"
+
+  # http2
+  http2: off
+
+  # worker_process
+  workerProcess: auto
+
+  # worker_connection
+  workerConnection: 1000
+
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
   # Size of persistent volume (default: 100Gi )

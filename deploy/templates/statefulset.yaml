@@ -136,6 +136,12 @@ spec:
             - name: nginx-proxy-config
               mountPath: /etc/nginx/conf.d/sites/proxy-cache.conf
               subPath: proxy-cache.conf
+            - name: nginx-ngc-config
+              mountPath: /etc/nginx/conf.d/sites/ngc.conf
+              subPath: ngc.conf
+            - name: nginx-proxy-common-config
+              mountPath: /etc/nginx/conf.d/sites/proxy-common.conf
+              subPath: proxy-common.conf
             - name: token
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount-vault
             - name: certs
@@ -165,6 +171,12 @@ spec:
           configMap:
             name: nvcf-container-config
         - name: nginx-proxy-config
+          configMap:
+            name: nvcf-proxy-config
+        - name: nginx-ngc-config
+          configMap:
+            name: nvcf-proxy-config
+        - name: nginx-proxy-common-config
           configMap:
             name: nvcf-proxy-config
 {{- if (.Values.traces).enabled }}

@@ -20,7 +20,7 @@ targetHost: stg.nvcr.io
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
   #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
-  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.5
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.7.10
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
@@ -46,19 +46,20 @@ cache:
 
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  valid: 1d
+  valid: 1h
 
+  workerProcess: auto
 
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
   # Size of persistent volume (default: 100Gi )
-  size: 200Gi
+  size: 50Gi
 
   # Name of storage class for persistent volume claim (default: azurefile )
   storageClassName: nvcf-cc-sc
 
   # Size of persistent volume for proxy cache (default: 200Gi)
-  sizeProxy: 200Gi
+  sizeProxy: 2000Gi
 
 # Configuration options related to how Container Cache Service is configured.
 service:
