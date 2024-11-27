@@ -41,11 +41,17 @@ cache:
 
   # Period a resource can remain in the cache without being accessed (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  inactive: 60d
+  inactive: 1d
 
   # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
-  valid: 30d
+  valid: 1d
+
+  # http2
+  http2: off
+
+  # worker_connection
+  workerConnection: 1000
 
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:

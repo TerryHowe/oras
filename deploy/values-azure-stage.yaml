@@ -48,7 +48,6 @@ cache:
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
   valid: 1h
 
-  workerProcess: auto
 
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
