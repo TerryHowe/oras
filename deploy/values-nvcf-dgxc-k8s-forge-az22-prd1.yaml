@@ -20,7 +20,7 @@ targetHost: nvcr.io
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
-  server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.1.5
+  server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.1.11
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nvcr.io/qtfpt1h0bieu/nvcf-core/nginx-prometheus-exporter:1.0
