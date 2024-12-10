@@ -38,7 +38,7 @@ cache:
 
   # Max size of the cache (default: 80g).
   # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
-  maxSize: 100g
+  maxSize: 500g
 
   # Period a resource can remain in the cache without being accessed (default: 60d).
   # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
