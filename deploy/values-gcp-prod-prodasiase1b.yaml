@@ -19,7 +19,7 @@ targetHost: nvcr.io
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
-  server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.1.12
+  server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.1.16
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nvcr.io/qtfpt1h0bieu/nvcf-core/nginx-prometheus-exporter:1.0
@@ -100,14 +100,6 @@ vault:
   # Vault Address (default: https://stg.vault.nvidia.com:443).
   vaultAddress: https://prod.vault.nvidia.com
 
-  # Node IP address of any node in the cluster.
-  # This must be used in the client daemonset in the CONTAINER_CACHE_IP environment variable in the form "https://<vault.hostIP>:<service.Port>".
-  hostIP: 10.0.32.6
-
-# Certificate hash is calculated by copying the nvcrRootCert contents to a
-# regular text file and running the following command
-# openssl x509 -hash -noout -in $file
-nvcfRootCertHash: "a47331bb.0"
 nvcfRootCert: |
   -----BEGIN CERTIFICATE-----
   MIIGoTCCBImgAwIBAgIUWRlz8A3YHyIQ/gXwQf+Kw7Y/yLcwDQYJKoZIhvcNAQEL

@@ -46,8 +46,10 @@ spec:
         env:
         - name: TARGET_HOST
           value: {{ $.Values.targetHost | default "nvcr.io" | quote }}
-        - name: CONTAINER_CACHE_IP
-          value: "https://{{ $.Values.vault.hostIP }}:{{ $.Values.service.port }}"
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         securityContext:
           privileged: true
         volumeMounts:
@@ -61,13 +63,17 @@ spec:
         args:
         - -c
         - |
-          mkdir -p /host/etc/containerd/certs.d/${TARGET_HOST}
-          cat <<EOF >/host/etc/containerd/certs.d/${TARGET_HOST}/hosts.toml
-          server = "https://${TARGET_HOST}"
-          [host."${CONTAINER_CACHE_IP}"]
-            capabilities = ["pull", "resolve"]
-            ca = "/etc/ssl/nginx_container_cache.crt"
+          hosts=(${TARGET_HOST//,/ })
+          for host in "${hosts[@]}"; do
+          echo "$host"
+          mkdir -p /host/etc/containerd/certs.d/$host
+          cat <<EOF >/host/etc/containerd/certs.d/$host/hosts.toml
+              server = "https://$host"
+              [host."https://${NODE_IP}:{{ $.Values.service.port }}"]
+              capabilities = ["pull", "resolve"]
+              ca = "/etc/ssl/nginx_container_cache.crt"
           EOF
+          done
           cp /host/nginx_container_cache.crt /host/etc/ssl/nginx_container_cache.crt
           while true; do sleep 1000; done
       volumes:
