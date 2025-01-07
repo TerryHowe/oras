@@ -61,8 +61,12 @@ persistentVolumeClaim:
   # Name of storage class for persistent volume claim (default: azurefile )
   storageClassName: nvcf-cc-sc
 
-  # Size of persistent volume for proxy cache (default: 200Gi)
-  sizeProxy: 10Gi
+  # Size of persistent volume for proxy cache (in GB, default 100)
+  sizeProxyGB: 10
+  # Percentage of space to keep free in proxyCache persistent volume to not trigger alarms
+  # WARNING: changing this value out of the default may trigger proxy cache disk space alerts for the cluster. Ensure
+  # those are adjusted beforehand.
+  # freeProxyPct: 5
 
 # Configuration options related to how Container Cache Service is configured.
 service:

@@ -1,5 +1,12 @@
 # NVCF Proxy Cache Release Notes
 
+# Version 0.10.0
+1. Use `min_free` instead of `max_size` in nginx.conf's `proxy_cache` directive to ensure safe utilization of available disk space
+and adjust value files accordingly for all clusters. This is part of alert review, https://jirasw.nvidia.com/browse/NVCFSRE-1928.
+
+# Upgrade Instructions:
+None
+
 # Version 0.9.0
 1. https://nvbugspro.nvidia.com/bug/5025641 - nvcf-container-cache container update to v1.1.23. 
 Adjusted slice_range and http_range processing.
