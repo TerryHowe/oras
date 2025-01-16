@@ -196,7 +196,7 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: {{ $.Values.persistentVolumeClaim.size | default "100Gi" | quote }}
+            storage: {{ printf "%dGi" (default 100 (int $.Values.persistentVolumeClaim.sizeGB)) | quote }}
         storageClassName: {{ $.Values.persistentVolumeClaim.storageClassName | default "azurefile" | quote }}
     - metadata:
         name: proxy-cache

@@ -56,7 +56,7 @@ cache:
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
   # Size of persistent volume (default: 100Gi )
-  size: 500Gi
+  sizeGB: 500
 
   # Name of storage class for persistent volume claim (default: azurefile )
   storageClassName: nvcf-cc-sc
