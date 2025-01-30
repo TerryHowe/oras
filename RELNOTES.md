@@ -1,5 +1,11 @@
 # NVCF Proxy Cache Release Notes
 
+# Version 0.12.0
+1. https://jirasw.nvidia.com/browse/NVCFSRE-3029 - Publish a `proxy_cache_instance_info` gauge metric to expose chart version for dashboarding
+
+## Upgrade Instructions:
+None
+
 # Version 0.11.0
 1. https://nvbugspro.nvidia.com/bug/5054765 - Set client_max_body_size to 0. Set proxy_request_buffering off.
 
