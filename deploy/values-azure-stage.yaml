@@ -20,7 +20,7 @@ targetHost: stg.nvcr.io,nvcr.io,ghcr.io
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
   #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
-  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.23
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.24
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
@@ -52,13 +52,13 @@ cache:
 # Configuration options related to how Container Cache Persistent Volume is configured.
 persistentVolumeClaim:
   # Size of persistent volume (default: 100Gi )
-  sizeGB: 50
+  sizeGB: 100
 
   # Name of storage class for persistent volume claim (default: azurefile )
-  storageClassName: nvcf-cc-sc
+  storageClassName: azurefile
 
   # Size of persistent volume for proxy cache (in GB, default 100)
-  sizeProxyGB: 2000
+  sizeProxyGB: 100
   # Percentage of space to keep free in proxyCache persistent volume to not trigger alarms
   # WARNING: changing this value out of the default may trigger proxy cache disk space alerts for the cluster. Ensure
   # those are adjusted beforehand.

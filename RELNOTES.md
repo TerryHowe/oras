@@ -1,5 +1,11 @@
 # NVCF Proxy Cache Release Notes
 
+# Version 0.13.0
+1. https://nvbugspro.nvidia.com/bug/5062467 - Storage failures due to proxy cache causes function errors
+
+## Upgrade Instructions:
+None
+
 # Version 0.12.0
 1. https://jirasw.nvidia.com/browse/NVCFSRE-3029 - Publish a `proxy_cache_instance_info` gauge metric to expose chart version for dashboarding
 
