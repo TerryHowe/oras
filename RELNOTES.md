@@ -1,5 +1,11 @@
 # NVCF Proxy Cache Release Notes
 
+# Version 0.14.0
+1. https://nvbugspro.nvidia.com/bug/5062467 - Retry all errors atleast once.
+
+## Upgrade Instructions:
+None
+
 # Version 0.13.0
 1. https://nvbugspro.nvidia.com/bug/5062467 - Storage failures due to proxy cache causes function errors
 
