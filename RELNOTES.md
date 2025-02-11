@@ -1,5 +1,8 @@
 # NVCF Proxy Cache Release Notes
 
+# version 0.15.0
+1. [OMPE-36465](https://jirasw.nvidia.com/browse/OMPE-36465) - Log the `ETag` of the object and whether the HTTP `Authorization` header was specified. Fix JSON syntax.
+
 # Version 0.14.0
 1. https://nvbugspro.nvidia.com/bug/5062467 - Retry all errors atleast once.
 
