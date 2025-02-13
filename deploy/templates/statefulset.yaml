@@ -154,6 +154,23 @@ spec:
           ports:
             - name: metrics
               containerPort: 9113
+    {{- if (.Values.traces).enabled }}
+        - name: opentelemetry-collector
+          image: {{ required "Property '.images.collector' is required." $.Values.images.collector | quote }}
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: otel-collector-access-token
+          volumeMounts:
+            - name: nvcf-collector-config
+              mountPath: /etc/otelcol-contrib/config.yaml
+              subPath: config.yaml
+          ports:
+            - name: grpc
+              containerPort: 4317
+            - name: http
+              containerPort: 4318
+    {{- end }}
       volumes:
         - name: token
           projected:
@@ -188,6 +205,14 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 1Mi
+{{- if eq $.Values.persistentVolumeClaim.storageClassName "emptydir" }}
+        - name: cache
+          emptyDir:
+            sizeLimit: {{ printf "%dGi" (default 100 (int $.Values.persistentVolumeClaim.sizeGB)) | quote }}
+        - name: proxy-cache
+          emptyDir:
+            sizeLimit: {{ printf "%dGi" (default 100 (int $.Values.persistentVolumeClaim.sizeProxyGB)) | quote }}
+{{- else }}
   volumeClaimTemplates:
     - metadata:
         name: cache
@@ -207,3 +232,4 @@ spec:
           requests:
             storage: {{ printf "%dGi" (default 100 (int $.Values.persistentVolumeClaim.sizeProxyGB)) | quote }}
         storageClassName: {{ $.Values.persistentVolumeClaim.storageClassName | default "azurefile" | quote }}
+  {{- end }}

@@ -2,6 +2,21 @@
 
 # version 0.15.0
 1. [OMPE-36465](https://jirasw.nvidia.com/browse/OMPE-36465) - Log the `ETag` of the object and whether the HTTP `Authorization` header was specified. Fix JSON syntax.
+2.  https://jirasw.nvidia.com/browse/NVCF-2604 - OTEL integration
+
+## Upgrade Instructions:
+Configuration Changes:
+1. Add the following to values-*.yaml under images:
+   collector: nvcr.io/nv-ngc-devops/opentelemetry-collector-contrib:0.112.0
+   2. Add the following section to vaules-*.yaml
+      traces:
+       # Enable tracing
+       enabled: false
+        # OpenTelemetry-Collector configuration.
+       collector:
+        # OpenTelemetry endpoint to send traces to.
+            endpoint: "prod.otel.kaizen.nvidia.com:8282"
+    
 
 # Version 0.14.0
 1. https://nvbugspro.nvidia.com/bug/5062467 - Retry all errors atleast once.

@@ -20,11 +20,12 @@ targetHost: stg.nvcr.io,nvcr.io,ghcr.io
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
   #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
-  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.25
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.26
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
-
+  # Name of the container image containing OpenTelemetry Collector.
+  collector: stg.nvcr.io/nv-cf/nvcf-core/opentelemetry-collector-contrib:0.112.0
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
     # The name of the Kubernetes secret to be used (NOT the secret itself).
@@ -55,7 +56,7 @@ persistentVolumeClaim:
   sizeGB: 100
 
   # Name of storage class for persistent volume claim (default: azurefile )
-  storageClassName: azurefile
+  storageClassName: nvcf-cc-sc
 
   # Size of persistent volume for proxy cache (in GB, default 100)
   sizeProxyGB: 100
@@ -82,6 +83,14 @@ metrics:
   # Bucket configuration for the throughput histogram (default: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000).
   # Must be a comma-separated list of positive integers.
   throughputHistogramBuckets: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000
+
+traces:
+  # Enable tracing
+  enabled: true
+  # OpenTelemetry-Collector configuration.
+  collector:
+    # OpenTelemetry endpoint to send traces to.
+    endpoint: "stg.otel.kaizen.nvidia.com:8282"
 
 # Custom annotations to be added to the pod.
 podAnnotations: {}

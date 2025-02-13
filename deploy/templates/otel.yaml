@@ -1,0 +1,8 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: otel-collector-access-token
+  namespace: container-caching
+data:
+  OTEL_COLLECTOR_ACCESS_TOKEN: cGx6VGNXMUdabGpRREVfUXhiLUtJOHk3Sjk5ODBtRmdZaXU3Zkh6U1c3WU9FZ0FDYjZZQi1zT2RNbU11dGhPRmlydEFub1I2NWo4X0wzQ05VLTg9
+type: Opaque

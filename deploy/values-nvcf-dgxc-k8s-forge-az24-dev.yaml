@@ -8,7 +8,7 @@
 
 # Sepcify labels for selecting node.
 nodeSelector: 
-  node.kubernetes.io/instance-type: cpu
+  nodeGroup: monitoring
 
 # Number of replicas to create of Container Cache.
 replicaCount: 1
@@ -87,6 +87,14 @@ metrics:
   # Must be a comma-separated list of positive integers.
   throughputHistogramBuckets: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000
 
+traces:
+  # Enable tracing
+  enabled: true
+  # OpenTelemetry-Collector configuration.
+  collector:
+    # OpenTelemetry endpoint to send traces to.
+    endpoint: "stg.otel.kaizen.nvidia.com:8282"
+
 # Custom annotations to be added to the pod.
 podAnnotations: {}
 
@@ -105,10 +113,10 @@ vault:
   clusterAccountName: dgxc-k8s-forge
 
   # Cluster Name (default: stage).
-  clusterName: nvcf-dgxc-k8s-forge-az24-dev2
+  clusterName: nvcf-dgxc-k8s-forge-az24-dev6
 
   # Vault Address (default: https://stg.vault.nvidia.com:443).
-  vaultAddress: https://stg.vault.nvidia.com
+  vaultAddress: https://stg.vault.nvidia.com:443
 
 nvcfRootCert: |
   -----BEGIN CERTIFICATE-----
