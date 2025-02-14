@@ -3,6 +3,7 @@
 # version 0.15.0
 1. [OMPE-36465](https://jirasw.nvidia.com/browse/OMPE-36465) - Log the `ETag` of the object and whether the HTTP `Authorization` header was specified. Fix JSON syntax.
 2.  https://jirasw.nvidia.com/browse/NVCF-2604 - OTEL integration
+3. https://nvbugspro.nvidia.com/bug/5108024 - [NVCF][Cluster Validation][az28] Cosmos Video Curator test pipeline failed due to fail to write data to s3
 
 ## Upgrade Instructions:
 Configuration Changes:
