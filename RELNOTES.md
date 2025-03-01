@@ -5,6 +5,8 @@
 2. https://jirasw.nvidia.com/browse/NVCF-2604 - OTEL integration
 3. https://nvbugspro.nvidia.com/bug/5108024 - [NVCF][Cluster Validation][az28] Cosmos Video Curator test pipeline failed due to fail to write data to s3
 4. [OMPE-37543](https://jirasw.nvidia.com/browse/OMPE-37543) - No Access Checks when `Cache-Control: no-cache` is present.
+5. [OMPE-28867]/[NVCF-2182] Adding Nucleus specific LFT proxy cache and service
+6. [OMPE-36697] Adding logging to proxy-cache on the Omniverse side
 
 ## Upgrade Instructions:
 Configuration Changes:

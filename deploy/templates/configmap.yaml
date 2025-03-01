@@ -17,3 +17,5 @@ metadata:
 data:
   nginx.conf: |-
      {{ tpl (.Files.Get "files/nginx.conf") . | nindent 4 }}
+  logging-formats.conf: |-
+     {{ tpl (.Files.Get "files/logging-formats.conf") . | nindent 4 }}

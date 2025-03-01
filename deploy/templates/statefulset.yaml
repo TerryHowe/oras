@@ -108,6 +108,9 @@ spec:
             - name: https-proxy
               containerPort: 14128
               protocol: TCP
+            - name: https-nucleus
+              containerPort: 14129
+              protocol: TCP
             - name: cache-metrics
               containerPort: 9145
               protocol: TCP
@@ -136,12 +139,18 @@ spec:
             - name: nginx-proxy-config
               mountPath: /etc/nginx/conf.d/sites/proxy-cache.conf
               subPath: proxy-cache.conf
+            - name: nginx-proxy-nucleus-config
+              mountPath: /etc/nginx/conf.d/sites/proxy-nucleus-cache.conf
+              subPath: proxy-nucleus-cache.conf
             - name: nginx-ngc-config
               mountPath: /etc/nginx/conf.d/sites/ngc.conf
               subPath: ngc.conf
             - name: nginx-proxy-common-config
               mountPath: /etc/nginx/conf.d/sites/proxy-common.conf
               subPath: proxy-common.conf
+            - name: nginx-logging-formats-config
+              mountPath: /etc/nginx/conf.d/sites/logging-formats.conf
+              subPath: logging-formats.conf
             - name: token
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount-vault
             - name: certs
@@ -181,6 +190,9 @@ spec:
         - name: nginx-config
           configMap: 
             name: nvcf-nginx-config
+        - name: nginx-logging-formats-config
+          configMap:
+            name: nvcf-nginx-config
         - name: nginx-default-config
           configMap:
             name: nvcf-default-config
@@ -191,6 +203,9 @@ spec:
           configMap:
             name: nvcf-proxy-config
         - name: nginx-ngc-config
+          configMap:
+            name: nvcf-proxy-config
+        - name: nginx-proxy-nucleus-config
           configMap:
             name: nvcf-proxy-config
         - name: nginx-proxy-common-config
