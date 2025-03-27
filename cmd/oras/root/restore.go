@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
-	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras/cmd/oras/internal/command"
@@ -38,128 +38,146 @@ import (
 	"slices"
 )
 
-type backupOptions struct {
+type restoreOptions struct {
 	option.Cache
 	option.Common
 	option.Platform
 	option.Terminal
+	option.Remote
+	Registry string
 
-	From        option.Target
-	output      string
+	input       string
 	concurrency int
-	sources     []string
 }
 
-func backupCmd() *cobra.Command {
-	var opts backupOptions
+func restoreCmd() *cobra.Command {
+	var opts restoreOptions
 	cmd := &cobra.Command{
-		Use:   "backup [flags] --output <directory> <source>{:<tag>|@<digest>}...",
-		Short: "Backup artifacts to a file",
-		Long: `Backup artifacts from a source to disk. When backing up an image index, all of its manifests will be copied
+		Use:   "restore [flags] --input <directory> <registry>",
+		Short: "Restore artifacts to a file",
+		Long: `Restore artifacts disk to a registry. When restoring an image index, all of its manifests will be copied
 
-Example - Backup artifacts from a registry to disk:
-  oras backup --output ./mirror registry.k8s.io/kube-apiserver-arm64:v1.31.0 registry.k8s.io/kube-controller-manager-arm64:v1.31.0
+Example - Restore artifacts from a registry to disk:
+  oras restore --input ./mirror localhost:15000
 `,
-		Args: cobra.MinimumNArgs(1),
+		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			opts.sources = args
-			opts.From.RawReference = args[0]
 			opts.DisableTTY(opts.Debug, false)
+			opts.Registry = args[0]
+			fmt.Printf("PreRunE parse %v\n", opts)
 			return option.Parse(cmd, &opts)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runBackup(cmd, &opts)
+			return runRestore(cmd, &opts)
 		},
 	}
-	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "output directory")
-	_ = cmd.MarkFlagRequired("output")
+	cmd.Flags().StringVarP(&opts.input, "input", "", "", "input directory")
+	_ = cmd.MarkFlagRequired("input")
 	cmd.Flags().IntVarP(&opts.concurrency, "concurrency", "", 3, "concurrency level")
 	option.ApplyFlags(&opts, cmd.Flags())
-	return oerrors.Command(cmd, &opts.From)
+	return oerrors.Command(cmd, &opts)
 }
 
-func runBackup(cmd *cobra.Command, opts *backupOptions) error {
-	ctx, _ := command.GetLogger(cmd, &opts.Common)
-	for _, source := range opts.sources {
-		src, err := opts.From.GetNewTarget(cmd, source)
-		if err != nil {
-			return err
-		}
+func runRestore(cmd *cobra.Command, opts *restoreOptions) error {
+	fmt.Printf("runRestore: start %v\n", opts.Registry)
+	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	//for _, source := range opts.sources {
+	from := option.NewOCITarget(opts.input)
+	err := from.Parse(cmd)
+	if err != nil {
+		return fmt.Errorf("parse source target %s: %w", opts.input, err)
+	}
 
-		path := filepath.Join(opts.output, src.Reference.Repository)
-		to := option.NewOCITarget(path)
-		err = to.Parse(cmd)
-		if err != nil {
-			return fmt.Errorf("parse target: %w", err)
-		}
+	path := filepath.Join(opts.Registry, opts.input)
+	to := option.NewOCITarget(path)
+	err = to.Parse(cmd)
+	if err != nil {
+		return fmt.Errorf("parse destination target %s: %w", path, err)
+	}
 
-		dst, err := oci.New(path)
-		if err != nil {
-			return fmt.Errorf("create oci target: %w", err)
-		}
+	//
+	//src, err := oci.New(opts.input)
+	//if err != nil {
+	//	return fmt.Errorf("create oci target: %w", err)
+	//}
 
-		ctx = registryutil.WithScopeHint(ctx, dst, auth.ActionPull, auth.ActionPush)
-		err = doBackup(ctx, src, dst, to.AnnotatedReference(), opts)
-		if err != nil {
-			return err
-		}
+	//dst, err := remote.NewRepository(path)
+	//if err != nil {
+	//	return fmt.Errorf("failed to get target %s: %v", path, err)
+	//}
+
+	ctx = registryutil.WithScopeHint(ctx, from, auth.ActionPull, auth.ActionPush)
+	err = doRestore(ctx, from, to, opts, logger)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func doBackup(ctx context.Context, src oras.ReadOnlyGraphTarget, dst oras.GraphTarget, destination string, opts *backupOptions) (err error) {
-	rOpts := oras.DefaultResolveOptions
-	rOpts.TargetPlatform = opts.Platform.Platform
-	desc, err := oras.Resolve(ctx, src, opts.From.Reference, rOpts)
+func doRestore(ctx context.Context, from *option.Target, to *option.Target, opts *restoreOptions, logger logrus.FieldLogger) (err error) {
+	src, err := from.NewTarget(opts.Common, logger)
 	if err != nil {
-		return fmt.Errorf("failed to resolve %s: %w", opts.From.Reference, err)
+		return fmt.Errorf("failed to create target %s: %v", from.Path, err)
 	}
 
+	dst, err := to.NewTarget(opts.Common, logger)
+	if err != nil {
+		return fmt.Errorf("failed to create target %s: %v", to.Path, err)
+	}
+
+	rOpts := oras.DefaultResolveOptions
+	rOpts.TargetPlatform = opts.Platform.Platform
+	desc, err := oras.Resolve(ctx, dst, to.Path, rOpts)
+	if err != nil {
+		return fmt.Errorf("failed to resolve %s: %v", to.Path, err)
+	}
+
+	// what is this silly thing
 	_, err = opts.CachedTarget(src)
 	if err != nil {
 		return err
 	}
 
-	// Prepare backup options
+	// Prepare restore options
 	extendedCopyOptions := oras.DefaultExtendedCopyOptions
 	extendedCopyOptions.Concurrency = opts.concurrency
 	extendedCopyOptions.FindPredecessors = func(ctx context.Context, src content.ReadOnlyGraphStorage, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 		return registry.Referrers(ctx, src, desc, "")
 	}
 
-	backupHandler, metadataHandler := display.NewBackupHandler(opts.Printer, opts.TTY, dst)
-	dst, err = backupHandler.StartTracking(dst)
+	restoreHandler, metadataHandler := display.NewRestoreHandler(opts.Printer, opts.TTY, dst)
+	dst, err = restoreHandler.StartTracking(dst)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		stopErr := backupHandler.StopTracking()
+		stopErr := restoreHandler.StopTracking()
 		if err == nil {
 			err = stopErr
 		}
 	}()
-	extendedCopyOptions.OnCopySkipped = backupHandler.OnCopySkipped
-	extendedCopyOptions.PreCopy = backupHandler.PreCopy
-	extendedCopyOptions.PostCopy = backupHandler.PostCopy
-	extendedCopyOptions.OnMounted = backupHandler.OnMounted
+	extendedCopyOptions.OnCopySkipped = restoreHandler.OnCopySkipped
+	extendedCopyOptions.PreCopy = restoreHandler.PreCopy
+	extendedCopyOptions.PostCopy = restoreHandler.PostCopy
+	extendedCopyOptions.OnMounted = restoreHandler.OnMounted
 
-	err = recursiveBackup(ctx, src, dst, opts.output, desc, extendedCopyOptions)
+	err = recursiveRestore(ctx, src, dst, desc.Digest.String(), desc, extendedCopyOptions)
 	if err != nil {
 		return err
 	}
 
-	if from, err := digest.Parse(opts.From.Reference); err == nil && from != desc.Digest {
+	if from, err := digest.Parse(to.Path); err == nil && from != desc.Digest {
 		// correct source digest
-		opts.From.RawReference = fmt.Sprintf("%s@%s", opts.From.Path, desc.Digest.String())
+		to.Path = fmt.Sprintf("%s@%s", to.Path, desc.Digest.String())
 	}
 
-	return metadataHandler.OnCopied(opts.From.AnnotatedReference(), destination)
+	return metadataHandler.OnCopied(from.AnnotatedReference(), to.AnnotatedReference())
 }
 
-// recursiveBackup copies an artifact and its referrers from one target to another.
+// recursiveRestore copies an artifact and its referrers from one target to another.
 // If the artifact is a manifest list or index, referrers of its manifests are copied as well.
-func recursiveBackup(ctx context.Context, src oras.ReadOnlyGraphTarget, dst oras.Target, dstRef string, root ocispec.Descriptor, opts oras.ExtendedCopyOptions) error {
+func recursiveRestore(ctx context.Context, src oras.ReadOnlyGraphTarget, dst oras.Target, dstRef string, root ocispec.Descriptor, opts oras.ExtendedCopyOptions) error {
 	if root.MediaType == ocispec.MediaTypeImageIndex || root.MediaType == docker.MediaTypeManifestList {
 		fetched, err := content.FetchAll(ctx, src, root)
 		if err != nil {
