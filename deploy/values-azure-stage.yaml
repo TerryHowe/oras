@@ -14,13 +14,13 @@ nodeSelector:
 replicaCount: 1
 
 # Domain of target Host where the proxy passes the request to (default: nvcr.io).
-targetHost: stg.nvcr.io,nvcr.io,ghcr.io
+targetHost: stg.nvcr.io,ghcr.io
 
 # Container image information used by Container Cache.
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
   #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
-  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.27
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.28
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0
@@ -59,7 +59,7 @@ persistentVolumeClaim:
   storageClassName: nvcf-cc-sc
 
   # Size of persistent volume for proxy cache (in GB, default 100)
-  sizeProxyGB: 100
+  sizeProxyGB: 2000
   # Percentage of space to keep free in proxyCache persistent volume to not trigger alarms
   # WARNING: changing this value out of the default may trigger proxy cache disk space alerts for the cluster. Ensure
   # those are adjusted beforehand.
@@ -86,7 +86,7 @@ metrics:
 
 traces:
   # Enable tracing
-  enabled: true
+  enabled: false
   # OpenTelemetry-Collector configuration.
   collector:
     # OpenTelemetry endpoint to send traces to.
