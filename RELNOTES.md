@@ -1,5 +1,11 @@
 # NVCF Proxy Cache Release Notes
 
+# version 0.17.0
+1. https://jirasw.nvidia.com/browse/NVCF-4025
+
+## Upgrade Instructions
+None
+
 # version 0.16.0
 1. https://nvbugspro.nvidia.com/bug/5190231
 2. https://nvbugspro.nvidia.com/bug/5154038
@@ -17,6 +23,7 @@ None
 6. [OMPE-36697] Adding logging to proxy-cache on the Omniverse side
 
 ## Upgrade Instructions:
+```
 Configuration Changes:
 1. Add the following to values-*.yaml under images:
    collector: nvcr.io/nv-ngc-devops/opentelemetry-collector-contrib:0.112.0
@@ -29,6 +36,7 @@ Configuration Changes:
         # OpenTelemetry endpoint to send traces to.
             endpoint: "prod.otel.kaizen.nvidia.com:8282"
     
+```
 
 # Version 0.14.0
 1. https://nvbugspro.nvidia.com/bug/5062467 - Retry all errors atleast once.
