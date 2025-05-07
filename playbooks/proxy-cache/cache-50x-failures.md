@@ -31,3 +31,16 @@ If you can use logs to determine quickly the requests impacted relate only to a 
  is impacted, you may as well just remove the `local-zone` and `local-data` lines for that zone from the server configmap 
  (`dns-proxy`/`nvcf-unbound-config`) and execute a `rollout restart` of the unbound statefulset as above instead of 
  deleting them all.
+
+# OVC2 Forward Proxy failures
+
+```https://lft-nvcf-proxy-cache.container-caching.svc.cluster.local:443 not found```
+The above error might indicate that your cluster doesn't have the latest proxy-cache version install, where this endpoint exists.
+Verify that the version is 0.15.0 or more here https://nvcf-grafana.thanos.nvidiangn.net/d/fec8riwppfgu8f/proxy-cache-version-tracking?orgId=1
+
+```upstream SSL certificate verify error: (20:unable to get local issuer certificate) while SSL handshaking to upstream```
+If the above happens, verify that the Nucleus Connection (AKA Bridge) has been setup using the Root CA used by NVCF.
+For example see https://jirasw.nvidia.com/browse/KAZD-8103
+
+```upstream SSL certificate does not match "bridge.bridge-az24-dev1.bridge.az.cloud.omniverse.nvidia.com" while SSL handshaking to upstream```
+The above error means that you are going to the Nucleus-Connection directly and not to the Nucleus Server with a Nucleus Connection redirect.
