@@ -31,8 +31,8 @@ import (
 
 func TestTarget_Parse_oci_path(t *testing.T) {
 	opts := Target{
-		Path:         "foo",
-		RawReference: "mocked/test",
+		Path:   "foo",
+		Remote: Remote{RawReference: "mocked/test"},
 	}
 	cmd := &cobra.Command{}
 	ApplyFlags(&opts, cmd.Flags())
@@ -77,8 +77,8 @@ func TestTarget_Parse_oci_and_oci_path(t *testing.T) {
 
 func TestTarget_Parse_remote(t *testing.T) {
 	opts := Target{
-		RawReference: "mocked/test",
-		IsOCILayout:  false,
+		Remote:      Remote{RawReference: "mocked/test"},
+		IsOCILayout: false,
 	}
 	cmd := &cobra.Command{}
 	ApplyFlags(&opts, cmd.Flags())
@@ -92,8 +92,8 @@ func TestTarget_Parse_remote(t *testing.T) {
 
 func TestTarget_Parse_remote_err(t *testing.T) {
 	opts := Target{
-		RawReference: "/test",
-		IsOCILayout:  false,
+		Remote:      Remote{RawReference: "/test"},
+		IsOCILayout: false,
 	}
 	cmd := &cobra.Command{}
 	ApplyFlags(&opts, cmd.Flags())
@@ -104,8 +104,8 @@ func TestTarget_Parse_remote_err(t *testing.T) {
 
 func Test_parseOCILayoutReference(t *testing.T) {
 	opts := Target{
-		RawReference: "/test",
-		IsOCILayout:  false,
+		Remote:      Remote{RawReference: "/test"},
+		IsOCILayout: false,
 	}
 	tests := []struct {
 		name    string
@@ -166,7 +166,7 @@ func TestTarget_Modify_errInvalidReference(t *testing.T) {
 		},
 	}
 	opts := &Target{
-		RawReference: "invalid-reference",
+		Remote: Remote{RawReference: "invalid-reference"},
 	}
 	got, modified := opts.Modify(&cobra.Command{}, errResp)
 
@@ -192,7 +192,7 @@ func TestTarget_Modify_errHostNotMatching(t *testing.T) {
 	}
 
 	opts := &Target{
-		RawReference: "registry-2.docker.io/test:tag",
+		Remote: Remote{RawReference: "registry-2.docker.io/test:tag"},
 	}
 	_, modified := opts.Modify(&cobra.Command{}, errResp)
 	if modified {
@@ -202,7 +202,6 @@ func TestTarget_Modify_errHostNotMatching(t *testing.T) {
 
 func TestTarget_Modify_dockerHint(t *testing.T) {
 	type fields struct {
-		Remote       Remote
 		RawReference string
 		Type         string
 		Reference    string
@@ -274,12 +273,13 @@ func TestTarget_Modify_dockerHint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := &Target{
-				Remote:       tt.fields.Remote,
-				RawReference: tt.fields.RawReference,
-				Type:         tt.fields.Type,
-				Reference:    tt.fields.Reference,
-				Path:         tt.fields.Path,
-				IsOCILayout:  tt.fields.IsOCILayout,
+				Remote: Remote{
+					RawReference: tt.fields.RawReference,
+					Reference:    tt.fields.Reference,
+				},
+				Type:        tt.fields.Type,
+				Path:        tt.fields.Path,
+				IsOCILayout: tt.fields.IsOCILayout,
 			}
 			got, modified := opts.Modify(cmd, tt.err)
 			gotErr, ok := got.(*oerrors.Error)

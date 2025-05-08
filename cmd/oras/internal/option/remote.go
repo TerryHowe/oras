@@ -23,6 +23,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/registry"
 	"os"
 	"strconv"
 	"strings"
@@ -68,7 +70,9 @@ type Remote struct {
 	Username        string
 	secretFromStdin bool
 	Secret          string
-	flagPrefix      string
+	RawReference    string
+	Reference       string
+	Path            string
 
 	resolveFlag           []string
 	applyDistributionSpec bool
@@ -91,46 +95,51 @@ func (opts *Remote) ApplyFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&opts.secretFromStdin, identityTokenFromStdinFlag, false, "read identity token from stdin")
 }
 
-func applyPrefix(prefix, description string) (flagPrefix, notePrefix string) {
-	if prefix == "" {
-		return "", ""
-	}
-	return prefix + "-", description + " "
+func (opts *Remote) getMutuallyExclusiveFlags(flagPrefix string) []string {
+	// TODO fix flagPrefix in calls
+	return []string{flagPrefix + "oci-layout-path", flagPrefix + "oci-layout"}
+}
+
+func (opts *Remote) GetDisplayString() string {
+	return fmt.Sprintf("[%s] %s", TargetTypeRemote, opts.RawReference)
+}
+
+func (opts *Remote) GetPath() string {
+	return opts.Path
 }
 
 // ApplyFlagsWithPrefix applies flags to a command flag set with a prefix string.
 // Commonly used for non-unary remote targets.
-func (opts *Remote) ApplyFlagsWithPrefix(fs *pflag.FlagSet, prefix, description string) {
+func (opts *Remote) ApplyFlagsWithPrefix(fs *pflag.FlagSet, flagPrefix, notePrefix string) {
 	var (
 		shortUser     string
 		shortPassword string
 		shortHeader   string
-		notePrefix    string
 	)
-	if prefix == "" {
+
+	if flagPrefix == "" {
 		shortUser, shortPassword = "u", "p"
 		shortHeader = "H"
 	}
-	opts.flagPrefix, notePrefix = applyPrefix(prefix, description)
 
 	if opts.applyDistributionSpec {
-		opts.DistributionSpec.ApplyFlagsWithPrefix(fs, prefix, description)
+		opts.DistributionSpec.ApplyFlagsWithPrefix(fs, flagPrefix, notePrefix)
 	}
-	fs.StringVarP(&opts.Username, opts.flagPrefix+usernameFlag, shortUser, "", notePrefix+"registry username")
-	fs.StringVarP(&opts.Secret, opts.flagPrefix+passwordFlag, shortPassword, "", notePrefix+"registry password or identity token")
-	fs.StringVar(&opts.Secret, opts.flagPrefix+identityTokenFlag, "", notePrefix+"registry identity token")
-	fs.BoolVar(&opts.Insecure, opts.flagPrefix+"insecure", false, "allow connections to "+notePrefix+"SSL registry without certs")
-	plainHTTPFlagName := opts.flagPrefix + "plain-http"
+	fs.StringVarP(&opts.Username, flagPrefix+usernameFlag, shortUser, "", notePrefix+"registry username")
+	fs.StringVarP(&opts.Secret, flagPrefix+passwordFlag, shortPassword, "", notePrefix+"registry password or identity token")
+	fs.StringVar(&opts.Secret, flagPrefix+identityTokenFlag, "", notePrefix+"registry identity token")
+	fs.BoolVar(&opts.Insecure, flagPrefix+"insecure", false, "allow connections to "+notePrefix+"SSL registry without certs")
+	plainHTTPFlagName := flagPrefix + "plain-http"
 	plainHTTP := fs.Bool(plainHTTPFlagName, false, "allow insecure connections to "+notePrefix+"registry without SSL check")
 	opts.plainHTTP = func() (bool, bool) {
 		return *plainHTTP, fs.Changed(plainHTTPFlagName)
 	}
-	fs.StringVar(&opts.CACertFilePath, opts.flagPrefix+caFileFlag, "", "server certificate authority file for the remote "+notePrefix+"registry")
-	fs.StringVarP(&opts.CertFilePath, opts.flagPrefix+certFileFlag, "", "", "client certificate file for the remote "+notePrefix+"registry")
-	fs.StringVarP(&opts.KeyFilePath, opts.flagPrefix+keyFileFlag, "", "", "client private key file for the remote "+notePrefix+"registry")
-	fs.StringArrayVar(&opts.resolveFlag, opts.flagPrefix+"resolve", nil, "customized DNS for "+notePrefix+"registry, formatted in `host:port:address[:address_port]`")
-	fs.StringArrayVar(&opts.Configs, opts.flagPrefix+"registry-config", nil, "`path` of the authentication file for "+notePrefix+"registry")
-	fs.StringArrayVarP(&opts.headerFlags, opts.flagPrefix+"header", shortHeader, nil, "add custom headers to "+notePrefix+"requests")
+	fs.StringVar(&opts.CACertFilePath, flagPrefix+caFileFlag, "", "server certificate authority file for the remote "+notePrefix+"registry")
+	fs.StringVarP(&opts.CertFilePath, flagPrefix+certFileFlag, "", "", "client certificate file for the remote "+notePrefix+"registry")
+	fs.StringVarP(&opts.KeyFilePath, flagPrefix+keyFileFlag, "", "", "client private key file for the remote "+notePrefix+"registry")
+	fs.StringArrayVar(&opts.resolveFlag, flagPrefix+"resolve", nil, "customized DNS for "+notePrefix+"registry, formatted in `host:port:address[:address_port]`")
+	fs.StringArrayVar(&opts.Configs, flagPrefix+"registry-config", nil, "`path` of the authentication file for "+notePrefix+"registry")
+	fs.StringArrayVarP(&opts.headerFlags, flagPrefix+"header", shortHeader, nil, "add custom headers to "+notePrefix+"requests")
 }
 
 // CheckStdinConflict checks if PasswordFromStdin or IdentityTokenFromStdin of a
@@ -147,9 +156,10 @@ func CheckStdinConflict(flags *pflag.FlagSet) error {
 
 // Parse tries to read password with optional cmd prompt.
 func (opts *Remote) Parse(cmd *cobra.Command) error {
-	usernameAndIdTokenFlags := []string{opts.flagPrefix + usernameFlag, opts.flagPrefix + identityTokenFlag}
-	passwordAndIdTokenFlags := []string{opts.flagPrefix + passwordFlag, opts.flagPrefix + identityTokenFlag}
-	certFileAndKeyFileFlags := []string{opts.flagPrefix + certFileFlag, opts.flagPrefix + keyFileFlag}
+	flagPrefix := "" // TODO fix this
+	usernameAndIdTokenFlags := []string{flagPrefix + usernameFlag, flagPrefix + identityTokenFlag}
+	passwordAndIdTokenFlags := []string{flagPrefix + passwordFlag, flagPrefix + identityTokenFlag}
+	certFileAndKeyFileFlags := []string{flagPrefix + certFileFlag, flagPrefix + keyFileFlag}
 	if cmd.Flags().Lookup(identityTokenFromStdinFlag) != nil {
 		usernameAndIdTokenFlags = append(usernameAndIdTokenFlags, identityTokenFromStdinFlag)
 		passwordAndIdTokenFlags = append(passwordAndIdTokenFlags, identityTokenFromStdinFlag)
@@ -169,7 +179,23 @@ func (opts *Remote) Parse(cmd *cobra.Command) error {
 	if err := oerrors.CheckRequiredTogetherFlags(cmd.Flags(), certFileAndKeyFileFlags...); err != nil {
 		return err
 	}
-	return opts.readSecret(cmd)
+	err := opts.readSecret(cmd)
+	if err != nil {
+		return err
+	}
+
+	if ref, err := registry.ParseReference(opts.RawReference); err != nil {
+		return &oerrors.Error{
+			OperationType:  oerrors.OperationTypeParseArtifactReference,
+			Err:            fmt.Errorf("%q: %w", opts.RawReference, err),
+			Recommendation: "Please make sure the provided reference is in the form of <registry>/<repo>[:tag|@digest]",
+		}
+	} else {
+		opts.Reference = ref.Reference
+		ref.Reference = ""
+		opts.Path = ref.String()
+	}
+	return nil
 }
 
 // readSecret tries to read password or identity token with
@@ -382,6 +408,16 @@ func (opts *Remote) NewRepository(reference string, common Common, logger logrus
 		}
 	}
 	return
+}
+
+// NewReadonlyTarget generates a new read only target based on target.
+func (opts *Remote) NewReadonlyTarget(ctx context.Context, common Common, logger logrus.FieldLogger) (ReadOnlyGraphTagFinderTarget, error) {
+	return opts.NewRepository(opts.RawReference, common, logger)
+}
+
+// NewTarget generates a new target based on target.
+func (opts *Remote) NewTarget(common Common, logger logrus.FieldLogger) (oras.GraphTarget, error) {
+	return opts.NewRepository(opts.RawReference, common, logger)
 }
 
 // isPlainHttp returns the plain http flag for a given registry.
