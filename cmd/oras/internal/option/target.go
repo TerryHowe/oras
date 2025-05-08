@@ -50,9 +50,7 @@ const (
 // Target implements oerrors.Handler interface.
 type Target struct {
 	Remote
-	RawReference string
-	Type         string
-	Reference    string //contains tag or digest
+	Type string
 	// Path contains
 	//  - path to the OCI image layout target, or
 	//  - registry and repository for the remote target
@@ -61,9 +59,12 @@ type Target struct {
 	IsOCILayout bool
 }
 
-// ApplyFlags applies flags to a command flag set for unary target
+// ApplyFlags updates flags with prefix and description if needed
 func (target *Target) ApplyFlags(fs *pflag.FlagSet) {
-	target.applyFlagsWithPrefix(fs, "", "")
+	flagPrefix := ""
+	notePrefix := "" // TODO fix me
+	fs.BoolVarP(&target.IsOCILayout, flagPrefix+"oci-layout", "", false, "set "+notePrefix+"target as an OCI image layout")
+	fs.StringVar(&target.Path, flagPrefix+"oci-layout-path", "", "[Experimental] set the path for the "+notePrefix+"OCI image layout target")
 	target.Remote.ApplyFlags(fs)
 }
 
@@ -72,31 +73,9 @@ func (target *Target) GetDisplayReference() string {
 	return fmt.Sprintf("[%s] %s", target.Type, target.RawReference)
 }
 
-// applyFlagsWithPrefix applies flags to fs with prefix and description.
-// The complete form of the `target` flag is designed to be
-//
-//	--target type=<type>[[,<key>=<value>][...]]
-//
-// For better UX, the boolean flag `--oci-layout` is introduced as an alias of
-// `--target type=oci-layout`.
-// Since there is only one target type besides the default `registry` type,
-// the full form is not implemented until a new type comes in.
-func (target *Target) applyFlagsWithPrefix(fs *pflag.FlagSet, prefix, description string) {
-	flagPrefix, notePrefix := applyPrefix(prefix, description)
-	fs.BoolVarP(&target.IsOCILayout, flagPrefix+"oci-layout", "", false, "set "+notePrefix+"target as an OCI image layout")
-	fs.StringVar(&target.Path, flagPrefix+"oci-layout-path", "", "[Experimental] set the path for the "+notePrefix+"OCI image layout target")
-}
-
-// ApplyFlagsWithPrefix applies flags to a command flag set with a prefix string.
-// Commonly used for non-unary remote targets.
-func (target *Target) ApplyFlagsWithPrefix(fs *pflag.FlagSet, prefix, description string) {
-	target.applyFlagsWithPrefix(fs, prefix, description)
-	target.Remote.ApplyFlagsWithPrefix(fs, prefix, description)
-}
-
 // Parse gets target options from user input.
 func (target *Target) Parse(cmd *cobra.Command) error {
-	if err := oerrors.CheckMutuallyExclusiveFlags(cmd.Flags(), target.flagPrefix+"oci-layout-path", target.flagPrefix+"oci-layout"); err != nil {
+	if err := oerrors.CheckMutuallyExclusiveFlags(cmd.Flags(), target.getMutuallyExclusiveFlags("")...); err != nil {
 		return err
 	}
 
@@ -113,17 +92,6 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 		return nil
 	default:
 		target.Type = TargetTypeRemote
-		if ref, err := registry.ParseReference(target.RawReference); err != nil {
-			return &oerrors.Error{
-				OperationType:  oerrors.OperationTypeParseArtifactReference,
-				Err:            fmt.Errorf("%q: %w", target.RawReference, err),
-				Recommendation: "Please make sure the provided reference is in the form of <registry>/<repo>[:tag|@digest]",
-			}
-		} else {
-			target.Reference = ref.Reference
-			ref.Reference = ""
-			target.Path = ref.String()
-		}
 		return target.Remote.Parse(cmd)
 	}
 }
