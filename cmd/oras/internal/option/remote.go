@@ -28,6 +28,9 @@ import (
 	"strings"
 	"sync"
 
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/registry"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -68,7 +71,9 @@ type Remote struct {
 	Username        string
 	secretFromStdin bool
 	Secret          string
-	flagPrefix      string
+	RawReference    string
+	Reference       string
+	Path            string
 
 	resolveFlag           []string
 	applyDistributionSpec bool
@@ -91,46 +96,55 @@ func (remo *Remote) ApplyFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&remo.secretFromStdin, identityTokenFromStdinFlag, false, "read identity token from stdin")
 }
 
-func applyPrefix(prefix, description string) (flagPrefix, notePrefix string) {
-	if prefix == "" {
-		return "", ""
-	}
-	return prefix + "-", description + " "
+func (remo *Remote) getMutuallyExclusiveFlags(flagPrefix string) []string {
+	// TODO fix flagPrefix in calls
+	return []string{flagPrefix + "oci-layout-path", flagPrefix + "oci-layout"}
+}
+
+func (remo *Remote) GetDisplayString() string {
+	return fmt.Sprintf("[%s] %s", TargetTypeRemote, remo.RawReference)
+}
+
+func (remo *Remote) GetPath() string {
+	return remo.Path
 }
 
 // ApplyFlagsWithPrefix applies flags to a command flag set with a prefix string.
 // Commonly used for non-unary remote targets.
-func (remo *Remote) ApplyFlagsWithPrefix(fs *pflag.FlagSet, prefix, description string) {
+func (remo *Remote) ApplyFlagsWithPrefix(fs *pflag.FlagSet, flagPrefix, notePrefix string) {
 	var (
 		shortUser     string
 		shortPassword string
 		shortHeader   string
-		notePrefix    string
 	)
-	if prefix == "" {
+
+	if flagPrefix == "" {
 		shortUser, shortPassword = "u", "p"
 		shortHeader = "H"
 	}
-	remo.flagPrefix, notePrefix = applyPrefix(prefix, description)
 
 	if remo.applyDistributionSpec {
-		remo.DistributionSpec.ApplyFlagsWithPrefix(fs, prefix, description)
+		remo.DistributionSpec.ApplyFlagsWithPrefix(fs, flagPrefix, notePrefix)
 	}
-	fs.StringVarP(&remo.Username, remo.flagPrefix+usernameFlag, shortUser, "", notePrefix+"registry username")
-	fs.StringVarP(&remo.Secret, remo.flagPrefix+passwordFlag, shortPassword, "", notePrefix+"registry password or identity token")
-	fs.StringVar(&remo.Secret, remo.flagPrefix+identityTokenFlag, "", notePrefix+"registry identity token")
-	fs.BoolVar(&remo.Insecure, remo.flagPrefix+"insecure", false, "allow connections to "+notePrefix+"SSL registry without certs")
-	plainHTTPFlagName := remo.flagPrefix + "plain-http"
+
+	if remo.applyDistributionSpec {
+		remo.DistributionSpec.ApplyFlagsWithPrefix(fs, flagPrefix, notePrefix)
+	}
+	fs.StringVarP(&remo.Username, flagPrefix+usernameFlag, shortUser, "", notePrefix+"registry username")
+	fs.StringVarP(&remo.Secret, flagPrefix+passwordFlag, shortPassword, "", notePrefix+"registry password or identity token")
+	fs.StringVar(&remo.Secret, flagPrefix+identityTokenFlag, "", notePrefix+"registry identity token")
+	fs.BoolVar(&remo.Insecure, flagPrefix+"insecure", false, "allow connections to "+notePrefix+"SSL registry without certs")
+	plainHTTPFlagName := flagPrefix + "plain-http"
 	plainHTTP := fs.Bool(plainHTTPFlagName, false, "allow insecure connections to "+notePrefix+"registry without SSL check")
 	remo.plainHTTP = func() (bool, bool) {
 		return *plainHTTP, fs.Changed(plainHTTPFlagName)
 	}
-	fs.StringVar(&remo.CACertFilePath, remo.flagPrefix+caFileFlag, "", "server certificate authority file for the remote "+notePrefix+"registry")
-	fs.StringVarP(&remo.CertFilePath, remo.flagPrefix+certFileFlag, "", "", "client certificate file for the remote "+notePrefix+"registry")
-	fs.StringVarP(&remo.KeyFilePath, remo.flagPrefix+keyFileFlag, "", "", "client private key file for the remote "+notePrefix+"registry")
-	fs.StringArrayVar(&remo.resolveFlag, remo.flagPrefix+"resolve", nil, "customized DNS for "+notePrefix+"registry, formatted in `host:port:address[:address_port]`")
-	fs.StringArrayVar(&remo.Configs, remo.flagPrefix+"registry-config", nil, "`path` of the authentication file for "+notePrefix+"registry")
-	fs.StringArrayVarP(&remo.headerFlags, remo.flagPrefix+"header", shortHeader, nil, "add custom headers to "+notePrefix+"requests")
+	fs.StringVar(&remo.CACertFilePath, flagPrefix+caFileFlag, "", "server certificate authority file for the remote "+notePrefix+"registry")
+	fs.StringVarP(&remo.CertFilePath, flagPrefix+certFileFlag, "", "", "client certificate file for the remote "+notePrefix+"registry")
+	fs.StringVarP(&remo.KeyFilePath, flagPrefix+keyFileFlag, "", "", "client private key file for the remote "+notePrefix+"registry")
+	fs.StringArrayVar(&remo.resolveFlag, flagPrefix+"resolve", nil, "customized DNS for "+notePrefix+"registry, formatted in `host:port:address[:address_port]`")
+	fs.StringArrayVar(&remo.Configs, flagPrefix+"registry-config", nil, "`path` of the authentication file for "+notePrefix+"registry")
+	fs.StringArrayVarP(&remo.headerFlags, flagPrefix+"header", shortHeader, nil, "add custom headers to "+notePrefix+"requests")
 }
 
 // CheckStdinConflict checks if PasswordFromStdin or IdentityTokenFromStdin of a
@@ -169,7 +183,23 @@ func (remo *Remote) Parse(cmd *cobra.Command) error {
 	if err := oerrors.CheckRequiredTogetherFlags(cmd.Flags(), certFileAndKeyFileFlags...); err != nil {
 		return err
 	}
-	return remo.readSecret(cmd)
+	err := remo.readSecret(cmd)
+	if err != nil {
+		return err
+	}
+
+	if ref, err := registry.ParseReference(remo.RawReference); err != nil {
+		return &oerrors.Error{
+			OperationType:  oerrors.OperationTypeParseArtifactReference,
+			Err:            fmt.Errorf("%q: %w", remo.RawReference, err),
+			Recommendation: "Please make sure the provided reference is in the form of <registry>/<repo>[:tag|@digest]",
+		}
+	} else {
+		remo.Reference = ref.Reference
+		ref.Reference = ""
+		remo.Path = ref.String()
+	}
+	return nil
 }
 
 // readSecret tries to read password or identity token with
@@ -382,6 +412,16 @@ func (remo *Remote) NewRepository(reference string, common Common, logger logrus
 		}
 	}
 	return
+}
+
+// NewReadonlyTarget generates a new read only target based on target.
+func (remo *Remote) NewReadonlyTarget(ctx context.Context, common Common, logger logrus.FieldLogger) (ReadOnlyGraphTagFinderTarget, error) {
+	return remo.NewRepository(remo.RawReference, common, logger)
+}
+
+// NewTarget generates a new target based on target.
+func (remo *Remote) NewTarget(common Common, logger logrus.FieldLogger) (oras.GraphTarget, error) {
+	return remo.NewRepository(remo.RawReference, common, logger)
 }
 
 // isPlainHttp returns the plain http flag for a given registry.

@@ -145,7 +145,7 @@ func runCopy(cmd *cobra.Command, opts *copyOptions) error {
 
 	if from, err := digest.Parse(opts.From.Reference); err == nil && from != desc.Digest {
 		// correct source digest
-		opts.From.RawReference = fmt.Sprintf("%s@%s", opts.From.Path, desc.Digest.String())
+		opts.From.RawReference = fmt.Sprintf("%s@%s", opts.From.GetPath(), desc.Digest.String())
 	}
 
 	if err := metadataHandler.OnCopied(&opts.BinaryTarget, desc); err != nil {
