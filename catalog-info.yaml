@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: "nvcf-proxycache"
+  description: NVCF Proxycache
+  annotations:
+    gitlab.com/project-slug: "nvcf/nvcf-cache/nvcf-container-cache"
+    nvcf.ngc.nvidia.com/env: "prd"
+    pagerduty.com/service-id: "PC3BRCH"
+    rootly.com/organization-id: "dgxc"
+    rootly.com/service-slug: "nvcf-proxycache"
+    rootly.com/service-auto-import: "true"
+spec:
+  type: "service"
+  owner: "group:default/camm-org"
+  lifecycle: "production"
+  pic: "user:default/bganesan"
+  system: nvcf
