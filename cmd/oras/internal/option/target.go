@@ -61,8 +61,18 @@ type Target struct {
 	IsOCILayout bool
 }
 
+// NewOCITarget creates an OCI layout target
+func NewOCITarget(reference string) *Target {
+	return &Target{
+		RawReference: reference,
+		Type:         TargetTypeOCILayout,
+		IsOCILayout:  true,
+	}
+}
+
 // ApplyFlags applies flags to a command flag set for unary target
 func (target *Target) ApplyFlags(fs *pflag.FlagSet) {
+	fmt.Printf("ApplyFlags %v\n", target)
 	target.applyFlagsWithPrefix(fs, "", "")
 	target.Remote.ApplyFlags(fs)
 }
@@ -94,6 +104,32 @@ func (target *Target) ApplyFlagsWithPrefix(fs *pflag.FlagSet, prefix, descriptio
 	target.Remote.ApplyFlagsWithPrefix(fs, prefix, description)
 }
 
+// GetNewTarget gets target options from user input.
+func (target *Target) GetNewTarget(cmd *cobra.Command, source string) (repository *remote.Repository, err error) {
+	target.Reference = ""
+	target.Path = ""
+	target.RawReference = source
+	err = target.Parse(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	err = target.EnsureReferenceNotEmpty(cmd, true)
+	if err != nil {
+		return nil, err
+	}
+
+	repository, err = remote.NewRepository(target.RawReference)
+	if err != nil {
+		if errors.Unwrap(err) == errdef.ErrInvalidReference {
+			return nil, fmt.Errorf("%q: %v", target.RawReference, err)
+		}
+		return nil, err
+	}
+
+	return repository, nil
+}
+
 // Parse gets target options from user input.
 func (target *Target) Parse(cmd *cobra.Command) error {
 	if err := oerrors.CheckMutuallyExclusiveFlags(cmd.Flags(), target.flagPrefix+"oci-layout-path", target.flagPrefix+"oci-layout"); err != nil {
@@ -102,6 +138,8 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 
 	switch {
 	case target.IsOCILayout:
+		fmt.Printf("XXXXXXXXX target.IsOCILayout=<%v>\n", target.IsOCILayout)
+
 		target.Type = TargetTypeOCILayout
 		if len(target.headerFlags) != 0 {
 			return errors.New("custom header flags cannot be used on an OCI image layout target")
@@ -113,6 +151,7 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 		return nil
 	default:
 		target.Type = TargetTypeRemote
+		fmt.Printf("XXXXXXXXX target.RawReference=<%s>\n", target.RawReference)
 		if ref, err := registry.ParseReference(target.RawReference); err != nil {
 			return &oerrors.Error{
 				OperationType:  oerrors.OperationTypeParseArtifactReference,
@@ -123,6 +162,7 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 			target.Reference = ref.Reference
 			ref.Reference = ""
 			target.Path = ref.String()
+			fmt.Printf("XXXXXXXXX target.Path=<%s>\n", target.Path)
 		}
 		return target.Remote.Parse(cmd)
 	}
