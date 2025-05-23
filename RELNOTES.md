@@ -1,5 +1,15 @@
 # NVCF Proxy Cache Release Notes
 
+# version 0.18.0
+1. https://jirasw.nvidia.com/browse/NVCF-4700
+2. https://jirasw.nvidia.com/browse/NVCF-4632
+
+## Upgrade Instructions
+The following configuration needs to be added to all Forge (AZ*) deployments
+
+nucleus:
+  enabled: true
+
 # version 0.17.0
 1. https://jirasw.nvidia.com/browse/NVCF-4025
 
