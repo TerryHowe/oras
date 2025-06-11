@@ -3,7 +3,7 @@
 # version 0.18.0
 1. https://jirasw.nvidia.com/browse/NVCF-4700
 2. https://jirasw.nvidia.com/browse/NVCF-4632
-
+3. https://jirasw.nvidia.com/browse/NVCF-5560 - Automatically configure containerd config.toml for container-cache
 ## Upgrade Instructions
 The following configuration needs to be added to all Forge (AZ*) deployments
 
