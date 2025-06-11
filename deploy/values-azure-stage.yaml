@@ -26,6 +26,9 @@ images:
   exporter: nginx/nginx-prometheus-exporter:1.0
   # Name of the container image containing OpenTelemetry Collector.
   collector: stg.nvcr.io/nv-cf/nvcf-core/opentelemetry-collector-contrib:0.112.0
+
+  containerdconfig: stg.nvcr.io/nv-cf/nvcf-core/nvcf-containerd-config:1.0.3
+
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
     # The name of the Kubernetes secret to be used (NOT the secret itself).

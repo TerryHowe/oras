@@ -40,9 +40,15 @@ spec:
       hostPID: true
       hostIPC: true
       hostNetwork: true
+    {{- with $.Values.images.secrets }}
+      imagePullSecrets:
+    {{- range $idx, $item := . }}
+        - name: {{ $item }}
+    {{- end }}
+    {{- end }}
       containers:
       - name: configure
-        image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+        image: {{ $.Values.images.containerdconfig }}
         env:
         - name: TARGET_HOST
           value: {{ $.Values.targetHost | default "nvcr.io" | quote }}
@@ -75,6 +81,7 @@ spec:
           EOF
           done
           cp /host/nginx_container_cache.crt /host/etc/ssl/nginx_container_cache.crt
+          python3 update_config.py /host/etc/containerd/config.toml
           while true; do sleep 1000; done
       volumes:
       - name: etc-containerd
