@@ -33,7 +33,7 @@ See [deploy](./deploy/) for container cache helm chart
 
 3. Customizing the helm [values.yaml](./deploy/)
 
-    Modify the values present in [values.yaml](./deploy/values-azure-stage.yaml) as per requirement.
+    Modify the values present in [values.yaml](deploy/values.yaml) as per requirement.
 
 4. Deploy Helm Chart
 

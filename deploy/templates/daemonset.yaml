@@ -6,20 +6,6 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ $.Release.Name }}-cm
-  namespace: {{ $.Release.Namespace | quote }}
-  labels:
-    app: {{ $.Release.Name }}
-    {{- include "nvcf-container-cache.labels" . | nindent 4 }}
-data:
-  # The nginx_proxy.crt file is the root certificate for the NVCF Staging environment.
-  # You can get this by `curl http://crls-stg.vpki.nvidia.com/his3/mtk3n2i5ntk2ytjm/ca/pem`.
-  # This should change based on the environment you are using.
-  nginx_container_cache.crt: {{ $.Values.nvcfRootCert | quote }}
----
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -27,7 +13,7 @@ metadata:
   namespace: {{ $.Release.Namespace | quote }}
   labels:
     app: {{ $.Release.Name }}
-    {{- include "nvcf-container-cache.labels" . | nindent 4 }}
+    {{ include "nvcf-container-cache.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
@@ -48,7 +34,7 @@ spec:
     {{- end }}
       containers:
       - name: configure
-        image: {{ $.Values.images.containerdconfig }}
+        image: {{ $.Values.images.certificates }}
         env:
         - name: TARGET_HOST
           value: {{ $.Values.targetHost | default "nvcr.io" | quote }}
@@ -56,13 +42,15 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: VAULT_ENABLED
+          value: {{ $.Values.vault.enabled | default false | quote }}
+        - name: CERT_LOCATION
+          value: {{ $.Values.vault.certLocation | quote }}
         securityContext:
           privileged: true
         volumeMounts:
         - name: etc-containerd
           mountPath: /host/etc/containerd
-        - name: ssl-configmap
-          mountPath: /host/
         - name: ssl-certs
           mountPath: /host/etc/ssl/
         command: ["/bin/bash"]
@@ -80,16 +68,17 @@ spec:
               ca = "/etc/ssl/nginx_container_cache.crt"
           EOF
           done
-          cp /host/nginx_container_cache.crt /host/etc/ssl/nginx_container_cache.crt
+          if [ "${VAULT_ENABLED}" = "true" ]; then
+            curl ${CERT_LOCATION} -o  /host/etc/ssl/nginx_container_cache.crt
+          else
+            cp /ca/root.crt.pem /host/etc/ssl/nginx_container_cache.crt
+          fi
           python3 update_config.py /host/etc/containerd/config.toml
           while true; do sleep 1000; done
       volumes:
       - name: etc-containerd
         hostPath:
           path: /etc/containerd
-      - name: ssl-configmap
-        configMap:
-          name: {{ $.Release.Name }}-cm
       - name: ssl-certs
         hostPath:
           path: /etc/ssl

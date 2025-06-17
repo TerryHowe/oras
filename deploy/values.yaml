@@ -1,2 +1,122 @@
+# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+# Sepcify labels for selecting node.
+nodeSelector:
+  node.kubernetes.io/instance-type: Standard_D64s_v3
+
+# Number of replicas to create of Container Cache.
+replicaCount: 1
+
+# Domain of target Host where the proxy passes the request to (default: nvcr.io).
+targetHost: stg.nvcr.io,ghcr.io
+
+# Container image information used by Container Cache.
+images:
+  # Name of the container image containing Container Cache Nginx Proxy.
+  #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.29
+
+  # Name of the container image containing Nginx Prometheus Exporter.
+  exporter: nginx/nginx-prometheus-exporter:1.0
+  # Name of the container image containing OpenTelemetry Collector.
+  collector: stg.nvcr.io/nv-cf/nvcf-core/opentelemetry-collector-contrib:0.112.0
+
+  certificates: stg.nvcr.io/nv-cf/nvcf-core/nvcf-proxy-tls-certs:1.0.0
+
+  # Name of Kubernetes secrets used to pull container image during pod deployment.
+  secrets:
+    # The name of the Kubernetes secret to be used (NOT the secret itself).
+    - balaji-cred
+
+# Configuration options related to how Container Cache is configured.
+cache:
+  # Size for storing cache keys (default: 10m).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
+  keyStorageSize: 50m
+
+  # Max size of the cache (default: 80g).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
+  maxSize: 180g
+
+  # Period a resource can remain in the cache without being accessed (default: 60d).
+  # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
+  inactive: 1d
+
+  # Period a cache is valid if the resource doesn't become inactive first (default: 60d).
+  # Must be a positive integer and followed by a scale suffix from https://nginx.org/en/docs/syntax.html.
+  valid: 1h
+
+
+# Configuration options related to how Container Cache Persistent Volume is configured.
+persistentVolumeClaim:
+  # Size of persistent volume (default: 100Gi )
+  sizeGB: 100
+
+  # Name of storage class for persistent volume claim (default: azurefile )
+  storageClassName: nvcf-cc-sc
+
+  # Size of persistent volume for proxy cache (in GB, default 100)
+  sizeProxyGB: 2000
+  # Percentage of space to keep free in proxyCache persistent volume to not trigger alarms
+  # WARNING: changing this value out of the default may trigger proxy cache disk space alerts for the cluster. Ensure
+  # those are adjusted beforehand.
+  # freeProxyPct: 5
+
+# Configuration options related to how Container Cache Service is configured.
+service:
+  # Type of Kubernetes service connection used by the server to provide network API services (default: ClusterIP).
+  # Valid options are ExternalName, ClusterIP, NodePort, and LoadBalancer.
+  type: NodePort
+
+  # Port to use to connect to the Container Cache Service (default: 30345).
+  port: 30345
+
+# Configuration options related to how Container Cache Metrics are configured.
+metrics:
+  # Size for storing cache Metrics (default: 10m).
+  # Must be a positive integer and followed by a scale suffix of k or K (kilobytes), m or M (megabytes), g or G (gigabytes).
+  cacheMetricsStorageSize: 300m
+
+  # Bucket configuration for the throughput histogram (default: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000).
+  # Must be a comma-separated list of positive integers.
+  throughputHistogramBuckets: 25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000
+
+traces:
+  # Enable tracing
+  enabled: false
+  # OpenTelemetry-Collector configuration.
+  collector:
+    # OpenTelemetry endpoint to send traces to.
+    endpoint: "stg.otel.kaizen.nvidia.com:8282"
+
+# Custom annotations to be added to the pod.
+podAnnotations: {}
+
+# Custom labels to be added to the pod.
+podLabels: {}
+
+# Vault configuration.
 vault:
   namespace: nvcf
+  # Cluster Cloud Service Provider (default: azure).
+  clusterCSP: azure
+
+  # Cluster Region (default: scus).
+  clusterRegion: scus
+
+  # Cluster Account Name (default: sis-azure-stage).
+  clusterAccountName: sis-azure-stage
+
+  # Cluster Name (default: stage).
+  clusterName: getty
+
+  # Vault Address (default: https://stg.vault.nvidia.com:443).
+  vaultAddress: https://stg.vault.nvidia.com
+  certLocation: http://crls-stg.vpki.nvidia.com/his3/mtk3n2i5ntk2ytjm/ca/pem
+  enabled: true

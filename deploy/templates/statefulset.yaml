@@ -25,12 +25,14 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- if (.Values.vault).enabled }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/agent-init-first: "false"  # should be injected last to pick up the CSR to get signed by Vault CA
         vault.hashicorp.com/agent-inject-status: update
         vault.hashicorp.com/agent-configmap: {{ $.Release.Name }}-vault-config
         vault.hashicorp.com/secret-volume-path: "/vault/secrets"
         vault.hashicorp.com/agent-copy-volume-mounts: certs  #this copies all the mounts from the certs container and attaches to the injected vault container(s) both init and regular
+      {{- end }}
       {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -75,11 +77,41 @@ spec:
             runAsNonRoot: false
             runAsUser: 0
         - name: certs
-          image: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
+          image:  {{ $.Values.images.certificates }}
+          env:
+            - name: VAULT_ENABLED
+              value: {{ $.Values.vault.enabled | default false | quote }}
           command: [ "/bin/bash" ]
           args:
             - -c
-            - "openssl req -new -newkey rsa:4096 -nodes -keyout /certs/leaf-ca.key -out /certs/leaf-ca.csr -subj '/C=US/ST=California/L=Santa Clara/O=NVIDIA Corporation/OU=NVCF/CN=nvcf-proxy-leaf-ca' && chmod +r /certs/leaf-ca.key"
+            - |
+              openssl req -new -newkey rsa:4096 -nodes \
+              -keyout /certs/leaf-ca.key \
+              -out /certs/leaf-ca.csr \
+              -subj '/C=US/ST=California/L=Santa Clara/O=NVIDIA Corporation/OU=NVCF/CN=nvcf-proxy-leaf-ca'
+
+              chmod +r /certs/leaf-ca.key
+
+              if [ "${VAULT_ENABLED}" = "false" ]; then
+
+                echo "basicConstraints=critical,CA:true,pathlen:0" > /tmp/intermediate.ext
+                echo "keyUsage=critical,keyCertSign,cRLSign" >> /tmp/intermediate.ext
+                echo "subjectKeyIdentifier=hash" >> /tmp/intermediate.ext
+                echo "authorityKeyIdentifier=keyid:always,issuer" >> /tmp/intermediate.ext
+
+                openssl x509 -req \
+                  -in /certs/leaf-ca.csr \
+                  -CA /etc/ssl/certs/intermediate.crt.pem \
+                  -CAkey /etc/ssl/certs/intermediate.key.pem \
+                  -CAcreateserial \
+                  -days 3650 \
+                  -out /certs/leaf-ca.crt \
+                  -extfile /tmp/intermediate.ext
+
+                # Create certificate bundle (chain)
+                cat /certs/leaf-ca.crt /etc/ssl/certs/intermediate.crt.pem /etc/ssl/certs/root.crt.pem > /certs/ssl-bundle.crt
+                cat /certs/ssl-bundle.crt
+              fi
           resources: { }
           volumeMounts:
             - name: certs
