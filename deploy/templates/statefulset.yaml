@@ -25,7 +25,7 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-      {{- if (.Values.vault).enabled }}
+      {{- if $.Values.vault.enabled | default false }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/agent-init-first: "false"  # should be injected last to pick up the CSR to get signed by Vault CA
         vault.hashicorp.com/agent-inject-status: update
@@ -45,7 +45,7 @@ spec:
     spec:
     {{- with $.Values.nodeSelector }}
       nodeSelector:
-        {{- toYaml $.Values.nodeSelector | nindent 8 }}
+        {{ toYaml $.Values.nodeSelector | nindent 8 }}
     {{- end }}
       affinity:
         podAntiAffinity:
