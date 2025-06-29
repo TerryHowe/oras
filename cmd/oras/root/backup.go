@@ -33,6 +33,7 @@ import (
 	"oras.land/oras/cmd/oras/internal/option"
 	"oras.land/oras/internal/docker"
 	"oras.land/oras/internal/graph"
+	"oras.land/oras/internal/listener"
 	"oras.land/oras/internal/registryutil"
 	"path/filepath"
 	"slices"
@@ -154,7 +155,16 @@ func doBackup(ctx context.Context, src oras.ReadOnlyGraphTarget, dst oras.GraphT
 		opts.From.RawReference = fmt.Sprintf("%s@%s", opts.From.Path, desc.Digest.String())
 	}
 
-	return metadataHandler.OnCopied(opts.From.GetDisplayReference(), destination)
+	err = metadataHandler.OnCopied(opts.From.GetDisplayReference(), destination)
+	if err != nil {
+		return err
+	}
+
+	tagListener := listener.NewTaggedListener(dst, metadataHandler.OnTagged)
+	if opts.From.Reference != desc.Digest.String() {
+		_, err = oras.Tag(ctx, tagListener, desc.Digest.String(), opts.From.Reference)
+	}
+	return err
 }
 
 // recursiveBackup copies an artifact and its referrers from one target to another.
