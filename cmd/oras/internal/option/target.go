@@ -128,28 +128,28 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 	}
 }
 
-func (target *Target) newRepository(common Common, logger logrus.FieldLogger) (*remote.Repository, error) {
-	return target.NewRepository(target.RawReference, common, logger)
+func (target *Target) newRepository(debug bool, logger logrus.FieldLogger) (*remote.Repository, error) {
+	return target.NewRepository(target.RawReference, debug, logger)
 }
 
 // NewTarget generates a new target based on target.
-func (target *Target) NewTarget(common Common, logger logrus.FieldLogger) (oras.GraphTarget, error) {
+func (target *Target) NewTarget(debug bool, logger logrus.FieldLogger) (oras.GraphTarget, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetGraphTarget()
 	case TargetTypeRemote:
-		return target.newRepository(common, logger)
+		return target.newRepository(debug, logger)
 	}
 	return nil, fmt.Errorf("unknown target type: %q", target.Type)
 }
 
 // NewBlobDeleter generates a new blob deleter based on target.
-func (target *Target) NewBlobDeleter(common Common, logger logrus.FieldLogger) (resource.ResolvableDeleter, error) {
+func (target *Target) NewBlobDeleter(debug bool, logger logrus.FieldLogger) (resource.ResolvableDeleter, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetBlobDeleter()
 	case TargetTypeRemote:
-		repo, err := target.newRepository(common, logger)
+		repo, err := target.newRepository(debug, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -159,12 +159,12 @@ func (target *Target) NewBlobDeleter(common Common, logger logrus.FieldLogger) (
 }
 
 // NewManifestDeleter generates a new blob deleter based on target.
-func (target *Target) NewManifestDeleter(common Common, logger logrus.FieldLogger) (resource.ResolvableDeleter, error) {
+func (target *Target) NewManifestDeleter(debug bool, logger logrus.FieldLogger) (resource.ResolvableDeleter, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetManifestDeleter()
 	case TargetTypeRemote:
-		repo, err := target.newRepository(common, logger)
+		repo, err := target.newRepository(debug, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -174,12 +174,12 @@ func (target *Target) NewManifestDeleter(common Common, logger logrus.FieldLogge
 }
 
 // NewReadonlyTarget generates a new read only target based on target.
-func (target *Target) NewReadonlyTarget(ctx context.Context, common Common, logger logrus.FieldLogger) (resource.ReadOnlyGraphTagFinderTarget, error) {
+func (target *Target) NewReadonlyTarget(ctx context.Context, debug bool, logger logrus.FieldLogger) (resource.ReadOnlyGraphTagFinderTarget, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetReadonlyTarget(ctx)
 	case TargetTypeRemote:
-		return target.NewRepository(target.RawReference, common, logger)
+		return target.NewRepository(target.RawReference, debug, logger)
 	}
 	return nil, fmt.Errorf("unknown target type: %q", target.Type)
 }

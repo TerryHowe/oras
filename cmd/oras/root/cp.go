@@ -122,7 +122,7 @@ func runCopy(cmd *cobra.Command, opts *copyOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
 
 	// Prepare source
-	src, err := opts.From.NewReadonlyTarget(ctx, opts.Common, logger)
+	src, err := opts.From.NewReadonlyTarget(ctx, opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func runCopy(cmd *cobra.Command, opts *copyOptions) error {
 	}
 
 	// Prepare destination
-	dst, err := opts.To.NewTarget(opts.Common, logger)
+	dst, err := opts.To.NewTarget(opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

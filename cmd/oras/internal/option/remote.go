@@ -357,7 +357,7 @@ func (remo *Remote) NewRegistry(registry string, common Common, logger logrus.Fi
 }
 
 // NewRepository assembles a oras remote repository.
-func (remo *Remote) NewRepository(reference string, common Common, logger logrus.FieldLogger) (repo *remote.Repository, err error) {
+func (remo *Remote) NewRepository(reference string, debug bool, logger logrus.FieldLogger) (repo *remote.Repository, err error) {
 	repo, err = remote.NewRepository(reference)
 	if err != nil {
 		if errors.Unwrap(err) == errdef.ErrInvalidReference {
@@ -368,7 +368,7 @@ func (remo *Remote) NewRepository(reference string, common Common, logger logrus
 	registry := repo.Reference.Registry
 	repo.PlainHTTP = remo.isPlainHttp(registry)
 	repo.HandleWarning = remo.handleWarning(registry, logger)
-	if repo.Client, err = remo.authClient(registry, common.Debug); err != nil {
+	if repo.Client, err = remo.authClient(registry, debug); err != nil {
 		return nil, err
 	}
 	repo.SkipReferrersGC = true

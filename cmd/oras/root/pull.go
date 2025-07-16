@@ -141,7 +141,7 @@ func runPull(cmd *cobra.Command, opts *pullOptions) (pullError error) {
 	if opts.Platform.Platform != nil {
 		copyOptions.WithTargetPlatform(opts.Platform.Platform)
 	}
-	target, err := opts.NewReadonlyTarget(ctx, opts.Common, logger)
+	target, err := opts.NewReadonlyTarget(ctx, opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

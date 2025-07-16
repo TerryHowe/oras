@@ -92,7 +92,7 @@ Example - Fetch and print the prettified descriptor of the config:
 func fetchConfig(cmd *cobra.Command, opts *fetchConfigOptions) (fetchErr error) {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
 
-	repo, err := opts.NewReadonlyTarget(ctx, opts.Common, logger)
+	repo, err := opts.NewReadonlyTarget(ctx, opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

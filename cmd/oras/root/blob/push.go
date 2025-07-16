@@ -113,7 +113,7 @@ Example - Push blob 'hi.txt' into an OCI image layout folder 'layout-dir':
 func pushBlob(cmd *cobra.Command, opts *pushBlobOptions) (err error) {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
 
-	target, err := opts.NewTarget(opts.Common, logger)
+	target, err := opts.NewTarget(opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

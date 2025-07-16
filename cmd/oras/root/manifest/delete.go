@@ -80,7 +80,7 @@ Example - Delete a manifest by digest 'sha256:99e4703fbf30916f549cd6bfa9cdbab614
 
 func deleteManifest(cmd *cobra.Command, opts *deleteOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	manifests, err := opts.NewManifestDeleter(opts.Common, logger)
+	manifests, err := opts.NewManifestDeleter(opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

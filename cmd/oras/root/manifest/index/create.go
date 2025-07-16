@@ -115,7 +115,7 @@ Example - Create an index and output the index to stdout, auto push will be disa
 
 func createIndex(cmd *cobra.Command, opts createOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	target, err := opts.NewTarget(opts.Common, logger)
+	target, err := opts.NewTarget(opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

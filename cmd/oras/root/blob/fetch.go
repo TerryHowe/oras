@@ -101,7 +101,7 @@ Example - Fetch and print a blob from OCI image layout archive file 'layout.tar'
 func fetchBlob(cmd *cobra.Command, opts *fetchBlobOptions) (fetchErr error) {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
 	var target oras.ReadOnlyTarget
-	target, err := opts.NewReadonlyTarget(ctx, opts.Common, logger)
+	target, err := opts.NewReadonlyTarget(ctx, opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

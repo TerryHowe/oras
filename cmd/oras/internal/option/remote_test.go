@@ -280,7 +280,7 @@ func TestRemote_NewRepository(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	repo, err := opts.NewRepository(uri.Host+"/"+testRepo, opts.Common, logrus.New())
+	repo, err := opts.NewRepository(uri.Host+"/"+testRepo, opts.Common.Debug, logrus.New())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -328,7 +328,7 @@ func TestRemote_NewRepositoryMTLS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	repo, err := opts.NewRepository(uri.Host+"/"+testRepo, opts.Common, logrus.New())
+	repo, err := opts.NewRepository(uri.Host+"/"+testRepo, opts.Common.Debug, logrus.New())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -378,7 +378,7 @@ func TestRemote_NewRepository_Retry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	repo, err := opts.NewRepository(uri.Host+"/"+testRepo, opts.Common, logrus.New())
+	repo, err := opts.NewRepository(uri.Host+"/"+testRepo, opts.Common.Debug, logrus.New())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

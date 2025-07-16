@@ -150,7 +150,7 @@ func runAttach(cmd *cobra.Command, opts *attachOptions) error {
 	}
 	defer func() { _ = store.Close() }()
 
-	dst, err := opts.NewTarget(opts.Common, logger)
+	dst, err := opts.NewTarget(opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

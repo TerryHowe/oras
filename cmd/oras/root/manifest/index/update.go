@@ -117,7 +117,7 @@ func updateIndex(cmd *cobra.Command, opts updateOptions) error {
 		return nil
 	}
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	target, err := opts.NewTarget(opts.Common, logger)
+	target, err := opts.NewTarget(opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}

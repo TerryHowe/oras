@@ -76,7 +76,7 @@ Example - Delete a blob and print its descriptor:
 
 func deleteBlob(cmd *cobra.Command, opts *deleteBlobOptions) (err error) {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	blobs, err := opts.NewBlobDeleter(opts.Common, logger)
+	blobs, err := opts.NewBlobDeleter(opts.Common.Debug, logger)
 	if err != nil {
 		return err
 	}
