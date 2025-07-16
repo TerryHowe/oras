@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/opencontainers/go-digest"
 	"net/http"
 	"oras.land/oras/cmd/oras/internal/resource"
 	"strings"
@@ -92,10 +93,29 @@ func (target *Target) ApplyFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&target.Path, target.prefix+"oci-layout-path", "", "[Experimental] set the path for the "+target.description+"OCI image layout target")
 }
 
+// getRawReference generates raw reference string.
+func getRawReference(rootPath string, tagOrDigest string) string {
+	var delimiter string
+	if _, err := digest.Parse(tagOrDigest); err == nil {
+		// digest
+		delimiter = "@"
+	} else {
+		// tag
+		delimiter = ":"
+	}
+	return fmt.Sprintf("%s%s%s", rootPath, delimiter, tagOrDigest)
+}
+
 // Parse gets target options from user input.
 func (target *Target) Parse(cmd *cobra.Command) error {
 	if err := oerrors.CheckMutuallyExclusiveFlags(cmd.Flags(), target.flagPrefix+"oci-layout-path", target.flagPrefix+"oci-layout"); err != nil {
 		return err
+	}
+
+	// oci-layout-path
+	if target.Path != "" {
+		target.IsOCILayout = true
+		target.RawReference = getRawReference(target.Path, target.RawReference)
 	}
 
 	switch {
@@ -106,11 +126,6 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 		}
 		target.ociLayout = resource.NewOciLayout(target.RawReference)
 		return target.ociLayout.Parse()
-	case target.Path != "":
-		target.Type = TargetTypeOCILayout
-		target.Reference = target.RawReference
-		target.ociLayout = resource.NewOciLayout(target.Path + ":" + target.Reference)
-		return nil
 	default:
 		target.Type = TargetTypeRemote
 		if ref, err := registry.ParseReference(target.RawReference); err != nil {
