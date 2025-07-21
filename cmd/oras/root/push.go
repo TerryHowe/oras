@@ -243,7 +243,7 @@ func runPush(cmd *cobra.Command, opts *pushOptions) error {
 	}
 
 	// prepare push
-	originalDst, err := opts.NewTarget(opts.Common.Debug, logger)
+	originalDst, err := opts.NewTarget()
 	if err != nil {
 		return err
 	}

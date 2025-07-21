@@ -96,7 +96,7 @@ Example - [Experimental] Show tags of a specific repository in OCI layout:
 
 func showTags(cmd *cobra.Command, opts *showTagsOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	finder, err := opts.NewReadonlyTarget(ctx, opts.Common.Debug, logger)
+	finder, err := opts.NewReadonlyTarget(ctx)
 	if err != nil {
 		return err
 	}

@@ -22,9 +22,9 @@ import (
 	"github.com/opencontainers/go-digest"
 	"net/http"
 	"oras.land/oras/cmd/oras/internal/resource"
+	"oras.land/oras/internal/trace"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -48,6 +48,7 @@ const (
 type Target struct {
 	Remote
 	ociLayout    resource.OciLayout
+	remote       resource.Remote
 	RawReference string
 	Type         string
 	Reference    string //contains tag or digest
@@ -121,50 +122,42 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 	switch {
 	case target.IsOCILayout:
 		target.Type = TargetTypeOCILayout
-		if len(target.headerFlags) != 0 {
+		if len(target.props.HeaderFlags) != 0 {
 			return errors.New("custom header flags cannot be used on an OCI image layout target")
 		}
 		target.ociLayout = resource.NewOciLayout(target.RawReference)
 		return target.ociLayout.Parse()
 	default:
 		target.Type = TargetTypeRemote
-		if ref, err := registry.ParseReference(target.RawReference); err != nil {
-			return &oerrors.Error{
-				OperationType:  oerrors.OperationTypeParseArtifactReference,
-				Err:            fmt.Errorf("%q: %w", target.RawReference, err),
-				Recommendation: "Please make sure the provided reference is in the form of <registry>/<repo>[:tag|@digest]",
-			}
-		} else {
-			target.Reference = ref.Reference
-			ref.Reference = ""
-			target.Path = ref.String()
-		}
-		return target.Remote.Parse(cmd)
+		logger := trace.Logger(cmd.Context())
+		debug := cmd.Flags().Changed("debug")
+		target.remote = resource.NewRemote(target.RawReference, logger, debug)
+		return target.remote.Parse()
 	}
 }
 
-func (target *Target) newRepository(debug bool, logger logrus.FieldLogger) (*remote.Repository, error) {
-	return target.NewRepository(target.RawReference, debug, logger)
+func (target *Target) newRepository() (*remote.Repository, error) {
+	return target.remote.NewRepository()
 }
 
 // NewTarget generates a new target based on target.
-func (target *Target) NewTarget(debug bool, logger logrus.FieldLogger) (oras.GraphTarget, error) {
+func (target *Target) NewTarget() (oras.GraphTarget, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetGraphTarget()
 	case TargetTypeRemote:
-		return target.newRepository(debug, logger)
+		return target.newRepository()
 	}
 	return nil, fmt.Errorf("unknown target type: %q", target.Type)
 }
 
 // NewBlobDeleter generates a new blob deleter based on target.
-func (target *Target) NewBlobDeleter(debug bool, logger logrus.FieldLogger) (resource.ResolvableDeleter, error) {
+func (target *Target) NewBlobDeleter() (resource.ResolvableDeleter, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetBlobDeleter()
 	case TargetTypeRemote:
-		repo, err := target.newRepository(debug, logger)
+		repo, err := target.newRepository()
 		if err != nil {
 			return nil, err
 		}
@@ -174,12 +167,12 @@ func (target *Target) NewBlobDeleter(debug bool, logger logrus.FieldLogger) (res
 }
 
 // NewManifestDeleter generates a new blob deleter based on target.
-func (target *Target) NewManifestDeleter(debug bool, logger logrus.FieldLogger) (resource.ResolvableDeleter, error) {
+func (target *Target) NewManifestDeleter() (resource.ResolvableDeleter, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetManifestDeleter()
 	case TargetTypeRemote:
-		repo, err := target.newRepository(debug, logger)
+		repo, err := target.newRepository()
 		if err != nil {
 			return nil, err
 		}
@@ -189,12 +182,12 @@ func (target *Target) NewManifestDeleter(debug bool, logger logrus.FieldLogger) 
 }
 
 // NewReadonlyTarget generates a new read only target based on target.
-func (target *Target) NewReadonlyTarget(ctx context.Context, debug bool, logger logrus.FieldLogger) (resource.ReadOnlyGraphTagFinderTarget, error) {
+func (target *Target) NewReadonlyTarget(ctx context.Context) (resource.ReadOnlyGraphTagFinderTarget, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
 		return target.ociLayout.GetReadonlyTarget(ctx)
 	case TargetTypeRemote:
-		return target.NewRepository(target.RawReference, debug, logger)
+		return target.remote.NewRepository()
 	}
 	return nil, fmt.Errorf("unknown target type: %q", target.Type)
 }
@@ -216,7 +209,7 @@ func (target *Target) ModifyError(cmd *cobra.Command, err error) (error, bool) {
 
 	// handle errors for remote targets
 	if errors.Is(err, auth.ErrBasicCredentialNotFound) {
-		return target.DecorateCredentialError(err), true
+		return target.decorateCredentialError(err), true
 	}
 
 	if errors.Is(err, errdef.ErrNotFound) {

@@ -18,7 +18,6 @@ package option
 import (
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -32,7 +31,7 @@ import (
 type BinaryTarget struct {
 	From        Target
 	To          Target
-	resolveFlag []string
+	ResolveFlag []string
 }
 
 // EnsureSourceTargetReferenceNotEmpty ensures that from target reference is not empty.
@@ -55,16 +54,14 @@ func (target *BinaryTarget) ApplyFlags(fs *pflag.FlagSet) {
 	target.From.ApplyFlags(fs)
 	target.To.setFlagDetails("to", "destination")
 	target.To.ApplyFlags(fs)
-	fs.StringArrayVarP(&target.resolveFlag, "resolve", "", nil, "base DNS rules formatted in `host:port:address[:address_port]` for --from-resolve and --to-resolve")
+	fs.StringArrayVarP(&target.ResolveFlag, "resolve", "", nil, "base DNS rules formatted in `host:port:address[:address_port]` for --from-resolve and --to-resolve")
 }
 
 // Parse parses user-provided flags and arguments into option struct.
 func (target *BinaryTarget) Parse(cmd *cobra.Command) error {
-	target.From.warned = make(map[string]*sync.Map)
-	target.To.warned = target.From.warned
 	// resolve are parsed in array order, latter will overwrite former
-	target.From.resolveFlag = append(target.resolveFlag, target.From.resolveFlag...)
-	target.To.resolveFlag = append(target.resolveFlag, target.To.resolveFlag...)
+	target.From.props.ResolveFlag = append(target.ResolveFlag, target.From.props.ResolveFlag...)
+	target.To.props.ResolveFlag = append(target.ResolveFlag, target.To.props.ResolveFlag...)
 	return Parse(cmd, target)
 }
 

@@ -121,7 +121,7 @@ func fetchManifest(cmd *cobra.Command, opts *fetchOptions) (fetchErr error) {
 		return err
 	}
 
-	target, err := opts.NewReadonlyTarget(ctx, opts.Common.Debug, logger)
+	target, err := opts.NewReadonlyTarget(ctx)
 	if err != nil {
 		return err
 	}

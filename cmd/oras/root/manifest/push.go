@@ -122,7 +122,7 @@ func pushManifest(cmd *cobra.Command, opts pushOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
 	var target oras.Target
 	var err error
-	target, err = opts.NewTarget(opts.Common.Debug, logger)
+	target, err = opts.NewTarget()
 	if err != nil {
 		return err
 	}

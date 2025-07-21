@@ -133,7 +133,7 @@ Example - Discover referrers of the manifest tagged 'example.com:v1' in an OCI i
 
 func runDiscover(cmd *cobra.Command, opts *discoverOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	repo, err := opts.NewReadonlyTarget(ctx, opts.Common.Debug, logger)
+	repo, err := opts.NewReadonlyTarget(ctx)
 	if err != nil {
 		return err
 	}
