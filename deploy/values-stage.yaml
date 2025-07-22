@@ -20,7 +20,7 @@ targetHost: stg.nvcr.io,ghcr.io
 images:
   # Name of the container image containing Container Cache Nginx Proxy.
   #server: nvcr.io/qtfpt1h0bieu/nvcf-core/nvcf-container-cache:v1.0
-  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.29
+  server: stg.nvcr.io/nv-cf/nvcf-core/nvcf-container-cache:v1.1.31
 
   # Name of the container image containing Nginx Prometheus Exporter.
   exporter: nginx/nginx-prometheus-exporter:1.0

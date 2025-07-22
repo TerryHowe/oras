@@ -73,7 +73,6 @@ spec:
           else
             cp /ca/root.crt.pem /host/etc/ssl/nginx_container_cache.crt
           fi
-          python3 update_config.py /host/etc/containerd/config.toml
           while true; do sleep 1000; done
       volumes:
       - name: etc-containerd
