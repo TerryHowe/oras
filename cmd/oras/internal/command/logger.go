@@ -24,6 +24,13 @@ import (
 	"oras.land/oras/internal/trace"
 )
 
+// NewLoggerInContext creates a new logger in the Context.
+func NewLoggerInContext(cmd *cobra.Command, debug bool) context.Context {
+	ctx, _ := trace.NewLogger(cmd.Context(), debug)
+	cmd.SetContext(ctx)
+	return ctx
+}
+
 // GetLogger returns a new FieldLogger and an associated Context derived from command context.
 func GetLogger(cmd *cobra.Command, opts *option.Common) (context.Context, logrus.FieldLogger) {
 	ctx, logger := trace.NewLogger(cmd.Context(), opts.Debug)
