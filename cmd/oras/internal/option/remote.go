@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"oras.land/oras/cmd/oras/internal/resource"
+	"oras.land/oras/internal/trace"
 	"os"
 	"strings"
 
@@ -45,11 +46,13 @@ const (
 // Remote options struct contains flags and arguments specifying one registry.
 // Remote implements oerrors.Handler and interface.
 type Remote struct {
+	RawReference string
 	DistributionSpec
-	props      resource.RemoteProperties
+	resource.RemoteProperties
 	flagPrefix string
 
 	applyDistributionSpec bool
+	RemoteResource        resource.Remote
 	store                 credentials.Store
 }
 
@@ -65,13 +68,13 @@ func (remo *Remote) ApplyFlags(fs *pflag.FlagSet) {
 }
 
 func (remo *Remote) applyStdinFlags(fs *pflag.FlagSet) {
-	props := &remo.props
+	props := &remo.RemoteProperties
 	fs.BoolVar(&props.SecretFromStdin, passwordFromStdinFlag, false, "read password from stdin")
 	fs.BoolVar(&props.SecretFromStdin, identityTokenFromStdinFlag, false, "read identity token from stdin")
 }
 
 // ApplyFlagsWithPrefix applies flags to a command flag set with a prefix string.
-// Commonly used for non-unary remote targets.
+// Commonly used for non-unary RemoteResource targets.
 func (remo *Remote) ApplyFlagsWithPrefix(fs *pflag.FlagSet, prefix, description string) {
 	var (
 		shortUser     string
@@ -87,15 +90,15 @@ func (remo *Remote) ApplyFlagsWithPrefix(fs *pflag.FlagSet, prefix, description 
 	if remo.applyDistributionSpec {
 		remo.DistributionSpec.ApplyFlagsWithPrefix(fs, prefix, description)
 	}
-	props := &remo.props
+	props := &remo.RemoteProperties
 	fs.StringVarP(&props.Username, remo.flagPrefix+usernameFlag, shortUser, "", description+"registry username")
 	fs.StringVarP(&props.Secret, remo.flagPrefix+passwordFlag, shortPassword, "", description+"registry password or identity token")
 	fs.StringVar(&props.Secret, remo.flagPrefix+identityTokenFlag, "", description+"registry identity token")
 	fs.BoolVar(&props.Insecure, remo.flagPrefix+"insecure", false, "allow connections to "+description+"SSL registry without certs")
 	fs.BoolVar(&props.PlainHTTP, remo.flagPrefix+"plain-http", false, "allow insecure connections to "+description+"registry without SSL check")
-	fs.StringVar(&props.CACertFilePath, remo.flagPrefix+caFileFlag, "", "server certificate authority file for the remote "+description+"registry")
-	fs.StringVarP(&props.CertFilePath, remo.flagPrefix+certFileFlag, "", "", "client certificate file for the remote "+description+"registry")
-	fs.StringVarP(&props.KeyFilePath, remo.flagPrefix+keyFileFlag, "", "", "client private key file for the remote "+description+"registry")
+	fs.StringVar(&props.CACertFilePath, remo.flagPrefix+caFileFlag, "", "server certificate authority file for the RemoteResource "+description+"registry")
+	fs.StringVarP(&props.CertFilePath, remo.flagPrefix+certFileFlag, "", "", "client certificate file for the RemoteResource "+description+"registry")
+	fs.StringVarP(&props.KeyFilePath, remo.flagPrefix+keyFileFlag, "", "", "client private key file for the RemoteResource "+description+"registry")
 	fs.StringArrayVar(&props.ResolveFlag, remo.flagPrefix+"resolve", nil, "customized DNS for "+description+"registry, formatted in `host:port:address[:address_port]`")
 	fs.StringArrayVar(&props.Configs, remo.flagPrefix+"registry-config", nil, "`path` of the authentication file for "+description+"registry")
 	fs.StringArrayVarP(&props.HeaderFlags, remo.flagPrefix+"header", shortHeader, nil, "add custom headers to "+description+"requests")
@@ -135,13 +138,16 @@ func (remo *Remote) Parse(cmd *cobra.Command) error {
 		return err
 	}
 
-	remo.props.PlainHTTPEnforced = cmd.Flags().Changed(remo.flagPrefix + "plain-http")
-	fmt.Printf("*** remo.props.PlainHTTPEnforced=%q\n", remo.props.PlainHTTPEnforced)
 	err := remo.readSecret(cmd)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	logger := trace.Logger(cmd.Context())
+	debug := cmd.Flags().Changed("debug")
+	remo.RemoteProperties.RawReference = remo.RawReference
+	remo.RemoteResource = resource.NewRemote(remo.RemoteProperties, logger, debug)
+	return remo.RemoteResource.Parse()
 }
 
 // readSecret tries to read password or identity token with
@@ -151,14 +157,14 @@ func (remo *Remote) readSecret(cmd *cobra.Command) (err error) {
 		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "WARNING! Using --identity-token via the CLI is insecure. Use --identity-token-stdin.")
 	} else if cmd.Flags().Changed(passwordFlag) {
 		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "WARNING! Using --password via the CLI is insecure. Use --password-stdin.")
-	} else if remo.props.SecretFromStdin {
+	} else if remo.SecretFromStdin {
 		// Prompt for credential
 		secret, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return err
 		}
-		remo.props.Secret = strings.TrimSuffix(string(secret), "\n")
-		remo.props.Secret = strings.TrimSuffix(remo.props.Secret, "\r")
+		remo.Secret = strings.TrimSuffix(string(secret), "\n")
+		remo.Secret = strings.TrimSuffix(remo.Secret, "\r")
 	}
 	return nil
 }

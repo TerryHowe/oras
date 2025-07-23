@@ -116,7 +116,7 @@ func updateIndex(cmd *cobra.Command, opts updateOptions) error {
 		_ = opts.Printer.Println("Nothing to update as no change is requested")
 		return nil
 	}
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 	target, err := opts.NewTarget()
 	if err != nil {
 		return err

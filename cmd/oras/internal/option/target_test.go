@@ -139,7 +139,7 @@ func TestTarget_ModifyError_ociLayout(t *testing.T) {
 }
 
 func TestTarget_ModifyError_NotFound(t *testing.T) {
-	// test errdef.ErrNotFound error returned by oci layout and remote
+	// test errdef.ErrNotFound error returned by oci layout and RemoteResource
 	tests := []struct {
 		name            string
 		targetType      string
@@ -158,7 +158,7 @@ func TestTarget_ModifyError_NotFound(t *testing.T) {
 			isOCILayout:   true,
 		},
 		{
-			name:          "remote not found",
+			name:          "RemoteResource not found",
 			targetType:    TargetTypeRemote,
 			rawReference:  "localhost:5000/test:latest",
 			wantErrPrefix: oerrors.RegistryErrorPrefix,

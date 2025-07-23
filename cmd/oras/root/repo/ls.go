@@ -18,6 +18,7 @@ package repo
 import (
 	"errors"
 	"fmt"
+	"oras.land/oras/cmd/oras/internal/resource"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -83,7 +84,8 @@ Example - [Experimental] List the repositories under the registry using the give
 
 func listRepository(cmd *cobra.Command, opts *repositoryOptions) error {
 	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	reg, err := opts.NewRegistry(opts.hostname, opts.Common, logger)
+	remoteResource := resource.NewRemote(opts.Remote.RemoteProperties, logger, opts.Common.Debug)
+	reg, err := remoteResource.NewRegistry()
 	if err != nil {
 		return err
 	}

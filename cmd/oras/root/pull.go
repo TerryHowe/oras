@@ -130,7 +130,7 @@ Example - Pull artifact files tagged 'example.com:v1' from an OCI image layout f
 }
 
 func runPull(cmd *cobra.Command, opts *pullOptions) (pullError error) {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 	statusHandler, metadataHandler, err := display.NewPullHandler(opts.Printer, opts.Format, opts.Path, opts.TTY)
 	if err != nil {
 		return err

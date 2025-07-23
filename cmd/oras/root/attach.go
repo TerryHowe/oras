@@ -134,7 +134,7 @@ Example - Attach file to the manifest tagged 'example.com:v1' in an OCI image la
 }
 
 func runAttach(cmd *cobra.Command, opts *attachOptions) error {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 	if len(opts.FileRefs) == 0 && len(opts.Annotations[option.AnnotationManifest]) == 0 {
 		return &oerrors.Error{
 			Err:            errors.New(`neither file nor annotation provided in the command`),

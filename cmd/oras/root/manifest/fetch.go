@@ -115,7 +115,7 @@ Example - Fetch raw manifest tagged 'example.com:v1' from an OCI image layout fo
 }
 
 func fetchManifest(cmd *cobra.Command, opts *fetchOptions) (fetchErr error) {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 	metadataHandler, contentHandler, err := display.NewManifestFetchHandler(opts.Printer, opts.Format, opts.OutputDescriptor, opts.Pretty.Pretty, opts.outputPath)
 	if err != nil {
 		return err

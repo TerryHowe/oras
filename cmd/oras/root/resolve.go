@@ -64,7 +64,7 @@ Example - Resolve digest of the target artifact:
 }
 
 func runResolve(cmd *cobra.Command, opts *resolveOptions) error {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 	repo, err := opts.NewReadonlyTarget(ctx)
 	if err != nil {
 		return err

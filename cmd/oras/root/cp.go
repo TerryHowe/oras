@@ -119,7 +119,7 @@ Example - Copy an artifact with multiple tags with concurrency tuned:
 }
 
 func runCopy(cmd *cobra.Command, opts *copyOptions) error {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 
 	// Prepare source
 	src, err := opts.From.NewReadonlyTarget(ctx)
