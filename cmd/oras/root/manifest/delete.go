@@ -79,7 +79,7 @@ Example - Delete a manifest by digest 'sha256:99e4703fbf30916f549cd6bfa9cdbab614
 }
 
 func deleteManifest(cmd *cobra.Command, opts *deleteOptions) error {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 	manifests, err := opts.NewManifestDeleter()
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func deleteManifest(cmd *cobra.Command, opts *deleteOptions) error {
 
 	// add both pull and delete scope hints for dst repository to save potential delete-scope token requests during deleting
 	hints := []string{auth.ActionPull, auth.ActionDelete}
-	if opts.ReferrersAPI == nil || !*opts.ReferrersAPI {
+	if opts.IsReferrersSet() {
 		// possibly needed when adding a new referrers index
 		hints = append(hints, auth.ActionPush)
 	}

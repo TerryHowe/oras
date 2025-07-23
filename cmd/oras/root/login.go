@@ -79,7 +79,7 @@ Example - Log in with username and password in an interactive terminal and no TL
 }
 
 func runLogin(cmd *cobra.Command, opts loginOptions) (err error) {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
 
 	// prompt for credential
 	if opts.Secret == "" {
@@ -112,11 +112,11 @@ func runLogin(cmd *cobra.Command, opts loginOptions) (err error) {
 	if err != nil {
 		return err
 	}
-	remote, err := opts.NewRegistry(opts.Hostname, opts.Common, logger)
+	remote, err := opts.RemoteResource.NewRegistry()
 	if err != nil {
 		return err
 	}
-	if err = credentials.Login(ctx, store, remote, opts.Credential()); err != nil {
+	if err = credentials.Login(ctx, store, remote, opts.RemoteResource.Credential()); err != nil {
 		return err
 	}
 	_ = opts.Printer.Println("Login Succeeded")

@@ -33,7 +33,6 @@ type repositoryOptions struct {
 	option.Remote
 	option.Common
 	option.Format
-	hostname  string
 	namespace string
 	last      string
 }
@@ -63,11 +62,12 @@ Example - [Experimental] List the repositories under the registry using the give
 		Args:    oerrors.CheckArgs(argument.Exactly(1), "the target registry to list repositories from"),
 		Aliases: []string{"list"},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			opts.RawReference = args[0]
 			return option.Parse(cmd, &opts)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			if opts.hostname, opts.namespace, err = repository.ParseRepoPath(args[0]); err != nil {
+			if _, opts.namespace, err = repository.ParseRepoPath(opts.RawReference); err != nil {
 				return fmt.Errorf("could not parse repository path: %w", err)
 			}
 			return listRepository(cmd, &opts)
@@ -82,8 +82,8 @@ Example - [Experimental] List the repositories under the registry using the give
 }
 
 func listRepository(cmd *cobra.Command, opts *repositoryOptions) error {
-	ctx, logger := command.GetLogger(cmd, &opts.Common)
-	reg, err := opts.NewRegistry(opts.hostname, opts.Common, logger)
+	ctx, _ := command.GetLogger(cmd, &opts.Common)
+	reg, err := opts.RemoteResource.NewRegistry()
 	if err != nil {
 		return err
 	}

@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
+	"strings"
+
 	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras/cmd/oras/internal/fileref"
-	"os"
-	"strings"
 )
 
 // OciLayout struct contains values describing an OCI image layout.

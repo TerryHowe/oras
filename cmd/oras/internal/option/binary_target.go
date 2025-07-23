@@ -60,8 +60,8 @@ func (target *BinaryTarget) ApplyFlags(fs *pflag.FlagSet) {
 // Parse parses user-provided flags and arguments into option struct.
 func (target *BinaryTarget) Parse(cmd *cobra.Command) error {
 	// resolve are parsed in array order, latter will overwrite former
-	target.From.props.ResolveFlag = append(target.ResolveFlag, target.From.props.ResolveFlag...)
-	target.To.props.ResolveFlag = append(target.ResolveFlag, target.To.props.ResolveFlag...)
+	target.From.ResolveFlag = append(target.ResolveFlag, target.From.ResolveFlag...)
+	target.To.ResolveFlag = append(target.ResolveFlag, target.To.ResolveFlag...)
 	return Parse(cmd, target)
 }
 

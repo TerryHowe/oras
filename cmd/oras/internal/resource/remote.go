@@ -22,37 +22,43 @@ import (
 
 // RemoteProperties contains all the attributes to access one registry.
 type RemoteProperties struct {
-	RawReference string
-	Repository   *remote.Repository
-	Reference    string
-	Path         string
+	RawReference     string
+	Registry         string
+	Repository       string
+	Reference        string
+	Path             string
+	RemoteRepository *remote.Repository
 
 	CACertFilePath  string
 	CertFilePath    string
 	KeyFilePath     string
 	Insecure        bool
+	PlainHTTP       bool
 	Configs         []string
 	Username        string
 	SecretFromStdin bool
 	Secret          string
 
-	ResolveFlag       []string
-	HeaderFlags       []string
-	PlainHTTP         bool
-	PlainHTTPEnforced bool
+	ResolveFlag  []string
+	HeaderFlags  []string
+	ReferrersAPI string
 }
 
 // IsPlainHttp returns the plain http flag for a given registry.
-func (prop *RemoteProperties) IsPlainHttp(registry string) bool {
-	if prop.PlainHTTPEnforced {
-		return prop.PlainHTTP
+func (prop *RemoteProperties) IsPlainHttp() bool {
+	if prop.PlainHTTP {
+		return true
 	}
-	host, _, _ := net.SplitHostPort(registry)
-	if host == "localhost" || registry == "localhost" {
+	host, _, _ := net.SplitHostPort(prop.Registry)
+	if host == "localhost" || prop.Registry == "localhost" {
 		// not specified, defaults to plain http for localhost
 		return true
 	}
-	return prop.PlainHTTP
+	return false
+}
+
+func (prop *RemoteProperties) IsReferrersSet() bool {
+	return prop.ReferrersAPI == ""
 }
 
 // tlsConfig assembles the tls config.
@@ -77,47 +83,8 @@ func (prop *RemoteProperties) tlsConfig() (*tls.Config, error) {
 	return config, nil
 }
 
-type Remote struct {
-	RemoteProperties
-	store          credentials.Store
-	headers        http.Header
-	warningHandler *WarningHandler
-	debug          bool
-}
-
-func NewRemote(rawReference string, logger logrus.FieldLogger, debug bool) Remote {
-	return Remote{
-		RemoteProperties: RemoteProperties{
-			RawReference: rawReference,
-		},
-		warningHandler: NewWarningHandler(logger),
-		debug:          debug,
-	}
-}
-
-// Parse parses the raw in format of <Path>[:<tag>|@<digest>]
-func (r *Remote) Parse() (err error) {
-	r.Repository, err = remote.NewRepository(r.RawReference)
-	if err != nil {
-		return err
-	}
-	r.Repository.PlainHTTP = r.IsPlainHttp(r.Repository.Reference.Registry)
-	r.Repository.SkipReferrersGC = true
-	//if r.ReferrersAPI != nil {
-	//	if err := repo.SetReferrersCapability(*r.ReferrersAPI); err != nil {
-	//		return nil, err
-	//	}
-	//}
-
-	r.Reference = r.Repository.Reference.Reference
-	repo := r.Repository.Reference
-	repo.Reference = ""
-	r.Path = repo.String()
-	return r.parseCustomHeaders()
-}
-
 // parseResolve parses resolve flag.
-func (r *Remote) parseResolve(baseDial onet.DialFunc) (onet.DialFunc, error) {
+func (r *RemoteProperties) parseResolve(baseDial onet.DialFunc) (onet.DialFunc, error) {
 	if len(r.ResolveFlag) == 0 {
 		return baseDial, nil
 	}
@@ -153,6 +120,51 @@ func (r *Remote) parseResolve(baseDial onet.DialFunc) (onet.DialFunc, error) {
 	}
 	dialer.BaseDialContext = baseDial
 	return dialer.DialContext, nil
+}
+
+type Remote struct {
+	RemoteProperties
+	store          credentials.Store
+	headers        http.Header
+	warningHandler *WarningHandler
+	debug          bool
+}
+
+func NewRemote(props RemoteProperties, logger logrus.FieldLogger, debug bool) Remote {
+	return Remote{
+		RemoteProperties: props,
+		warningHandler:   NewWarningHandler(logger),
+		debug:            debug,
+	}
+}
+
+// Parse parses the raw in format of <Path>[:<tag>|@<digest>]
+func (r *Remote) Parse() (err error) {
+	r.RemoteRepository, err = remote.NewRepository(r.RawReference)
+	if err != nil {
+		return err
+	}
+	r.RemoteRepository.PlainHTTP = r.IsPlainHttp()
+	r.RemoteRepository.SkipReferrersGC = true
+	r.RemoteRepository.HandleWarning = r.warningHandler.GetHandler(r.RemoteRepository.Reference.Registry)
+	if r.RemoteRepository.Client, err = r.authClient(); err != nil {
+		return err
+	}
+	//if r.ReferrersAPI != nil {
+	//	if err := repo.SetReferrersCapability(*r.ReferrersAPI); err != nil {
+	//		return nil, err
+	//	}
+	//}
+
+	r.Reference = r.RemoteRepository.Reference.Reference
+	repo := r.RemoteRepository.Reference
+	repo.Reference = ""
+	fmt.Printf("repo: %s\n", r.RemoteRepository.Reference.Registry)
+	fmt.Printf("repo: %s\n", r.RemoteRepository.Reference.Repository)
+	fmt.Printf("repo: %s\n", r.RemoteRepository.Reference.Reference)
+	r.Path = repo.String()
+	fmt.Printf("r.Path: %s\n", r.Path)
+	return r.parseCustomHeaders()
 }
 
 func (r *Remote) parseCustomHeaders() error {
@@ -221,25 +233,22 @@ func (r *Remote) authClient() (client *auth.Client, err error) {
 }
 
 // NewRegistry assembles a oras remote registry.
-func (r *Remote) NewRegistry(registry string, warningHandler *WarningHandler) (reg *remote.Registry, err error) {
+func (r *Remote) NewRegistry() (reg *remote.Registry, err error) {
+	registry := r.RemoteRepository.Reference.Registry
 	reg, err = remote.NewRegistry(registry)
 	if err != nil {
 		return nil, err
 	}
 	registry = reg.Reference.Registry
-	reg.PlainHTTP = r.IsPlainHttp(registry)
-	reg.HandleWarning = warningHandler.GetHandler(registry)
+	reg.PlainHTTP = r.IsPlainHttp()
+	reg.HandleWarning = r.warningHandler.GetHandler(registry)
 	if reg.Client, err = r.authClient(); err != nil {
 		return nil, err
 	}
 	return
 }
 
-// NewRepository assembles a remote repository.
-func (r *Remote) NewRepository() (_ *remote.Repository, err error) {
-	r.Repository.HandleWarning = r.warningHandler.GetHandler(r.Repository.Reference.Registry)
-	if r.Repository.Client, err = r.authClient(); err != nil {
-		return nil, err
-	}
-	return r.Repository, nil
+// GetRemoteRepository assembles a remote repository.
+func (r *Remote) GetRemoteRepository() *remote.Repository {
+	return r.RemoteRepository
 }

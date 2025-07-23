@@ -19,11 +19,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/opencontainers/go-digest"
 	"net/http"
+	"strings"
+
+	"github.com/opencontainers/go-digest"
 	"oras.land/oras/cmd/oras/internal/resource"
 	"oras.land/oras/internal/trace"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -47,14 +48,13 @@ const (
 // Target implements oerrors.Handler interface.
 type Target struct {
 	Remote
-	ociLayout    resource.OciLayout
-	remote       resource.Remote
-	RawReference string
-	Type         string
-	Reference    string //contains tag or digest
+	localResource resource.OciLayout
+	RawReference  string
+	Type          string
+	Reference     string //contains tag or digest
 	// Path contains
 	//  - path to the OCI image layout target, or
-	//  - registry and repository for the remote target
+	//  - registry and repository for the RemoteResource target
 	Path string
 
 	IsOCILayout bool
@@ -122,29 +122,30 @@ func (target *Target) Parse(cmd *cobra.Command) error {
 	switch {
 	case target.IsOCILayout:
 		target.Type = TargetTypeOCILayout
-		if len(target.props.HeaderFlags) != 0 {
+		if len(target.RemoteResource.HeaderFlags) != 0 {
 			return errors.New("custom header flags cannot be used on an OCI image layout target")
 		}
-		target.ociLayout = resource.NewOciLayout(target.RawReference)
-		return target.ociLayout.Parse()
+		target.localResource = resource.NewOciLayout(target.RawReference)
+		return target.localResource.Parse()
 	default:
 		target.Type = TargetTypeRemote
 		logger := trace.Logger(cmd.Context())
 		debug := cmd.Flags().Changed("debug")
-		target.remote = resource.NewRemote(target.RawReference, logger, debug)
-		return target.remote.Parse()
+		target.RemoteProperties.RawReference = target.RawReference
+		target.RemoteResource = resource.NewRemote(target.RemoteProperties, logger, debug)
+		return target.RemoteResource.Parse()
 	}
 }
 
 func (target *Target) newRepository() (*remote.Repository, error) {
-	return target.remote.NewRepository()
+	return target.RemoteResource.GetRemoteRepository(), nil
 }
 
 // NewTarget generates a new target based on target.
 func (target *Target) NewTarget() (oras.GraphTarget, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
-		return target.ociLayout.GetGraphTarget()
+		return target.localResource.GetGraphTarget()
 	case TargetTypeRemote:
 		return target.newRepository()
 	}
@@ -155,7 +156,7 @@ func (target *Target) NewTarget() (oras.GraphTarget, error) {
 func (target *Target) NewBlobDeleter() (resource.ResolvableDeleter, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
-		return target.ociLayout.GetBlobDeleter()
+		return target.localResource.GetBlobDeleter()
 	case TargetTypeRemote:
 		repo, err := target.newRepository()
 		if err != nil {
@@ -170,7 +171,7 @@ func (target *Target) NewBlobDeleter() (resource.ResolvableDeleter, error) {
 func (target *Target) NewManifestDeleter() (resource.ResolvableDeleter, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
-		return target.ociLayout.GetManifestDeleter()
+		return target.localResource.GetManifestDeleter()
 	case TargetTypeRemote:
 		repo, err := target.newRepository()
 		if err != nil {
@@ -185,9 +186,9 @@ func (target *Target) NewManifestDeleter() (resource.ResolvableDeleter, error) {
 func (target *Target) NewReadonlyTarget(ctx context.Context) (resource.ReadOnlyGraphTagFinderTarget, error) {
 	switch target.Type {
 	case TargetTypeOCILayout:
-		return target.ociLayout.GetReadonlyTarget(ctx)
+		return target.localResource.GetReadonlyTarget(ctx)
 	case TargetTypeRemote:
-		return target.remote.NewRepository()
+		return target.RemoteResource.GetRemoteRepository(), nil
 	}
 	return nil, fmt.Errorf("unknown target type: %q", target.Type)
 }
@@ -203,11 +204,11 @@ func (target *Target) EnsureReferenceNotEmpty(cmd *cobra.Command, allowTag bool)
 // ModifyError handles error during cmd execution.
 func (target *Target) ModifyError(cmd *cobra.Command, err error) (error, bool) {
 	if target.IsOCILayout {
-		// short circuit for non-remote targets
+		// short circuit for non-RemoteResource targets
 		return err, false
 	}
 
-	// handle errors for remote targets
+	// handle errors for RemoteResource targets
 	if errors.Is(err, auth.ErrBasicCredentialNotFound) {
 		return target.decorateCredentialError(err), true
 	}
