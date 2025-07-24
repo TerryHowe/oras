@@ -27,7 +27,7 @@ images:
   # Name of the container image containing OpenTelemetry Collector.
   collector: stg.nvcr.io/nv-cf/nvcf-core/opentelemetry-collector-contrib:0.112.0
 
-  certificates: stg.nvcr.io/nv-cf/nvcf-core/nvcf-proxy-tls-certs:1.0.0
+  certificates: stg.nvcr.io/nv-cf/nvcf-core/nvcf-proxy-tls-certs:1.1.0
 
   # Name of Kubernetes secrets used to pull container image during pod deployment.
   secrets:
