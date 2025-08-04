@@ -1,6 +1,16 @@
 # NVCF Proxy Cache Release Notes
 
-# version 0.18.0
+# version 0.21.0
+1. Remove unbound dependency
+## Upgrade Instructions
+None
+
+# version 0.20.0
+1. BYOC-SIM packaging
+## Upgrade Instructions
+
+None
+# version 0.19.0
 1. https://jirasw.nvidia.com/browse/NVCF-5670
 ## Upgrade Instructions
 None
