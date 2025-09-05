@@ -1,0 +1,39 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/instance: prometheus-agent
+    app.kubernetes.io/name: metrics-proxy-agent
+    jobLabel: metrics-proxy-agent
+    release: prometheus-agent
+    prometheus.agent/podmonitor-discover: "true"
+  name: metrics-proxy-agent
+  namespace: monitoring
+spec:
+  podMetricsEndpoints:
+  - scheme: http
+    path: /metrics
+    port: metrics
+    params:
+      format: [prometheus]
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_container_name]
+      regex: "nginx-prometheus-exporter"
+      action: keep
+  - scheme: http
+    path: /cache_metrics
+    port: cache-metrics
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_container_name]
+      regex: "nginx-proxy"
+      action: keep
+  jobLabel: jobLabel
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: nvcf-container-cache
+      app.kubernetes.io/name: nvcf-container-cache
+  namespaceSelector:
+    matchNames:
+    - container-caching
+

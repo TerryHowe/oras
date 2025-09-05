@@ -21,5 +21,7 @@ data:
      {{ tpl (.Files.Get "files/proxy-nucleus-cache.conf") . | nindent 4 }}
   ngc.conf: |-
      {{ tpl (.Files.Get "files/ngc.conf") . | nindent 4 }}
+  hf.conf: |-
+     {{ tpl (.Files.Get "files/hf.conf") . | nindent 4 }}
   proxy-common.conf: |-
      {{ tpl (.Files.Get "files/proxy-common.conf") . | nindent 4 }}

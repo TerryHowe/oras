@@ -179,6 +179,9 @@ spec:
             - name: nginx-ngc-config
               mountPath: /etc/nginx/conf.d/sites/ngc.conf
               subPath: ngc.conf
+            - name: nginx-hf-config
+              mountPath: /etc/nginx/conf.d/sites/hf.conf
+              subPath: hf.conf
             - name: nginx-proxy-common-config
               mountPath: /etc/nginx/conf.d/sites/proxy-common.conf
               subPath: proxy-common.conf
@@ -237,6 +240,9 @@ spec:
           configMap:
             name: nvcf-proxy-config
         - name: nginx-ngc-config
+          configMap:
+            name: nvcf-proxy-config
+        - name: nginx-hf-config
           configMap:
             name: nvcf-proxy-config
       {{- if (.Values.nucleus).enabled | default true }}
