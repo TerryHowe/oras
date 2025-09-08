@@ -1,65 +1,80 @@
-# Copyright (c) 2023-2024, NVIDIA CORPORATION.  All rights reserved.
-#
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+###########################################
+# Imported Modules
+###########################################
+include:
+  # package and publish nvcf-container-cache Helm chart
+  - component: gitlab-master.nvidia.com/cds/cds-components/helm-package@0.16.6
+    inputs:
+      job-name: helm-package:nvcf-container-cache
+      chart-path: deploy
+      extends: [.helm-package]
 
-stages:          # List of stages for jobs, and their order of execution
-  - build
-  - release
+  - component: gitlab-master.nvidia.com/cds/cds-components/helm-push-ngc@0.16.6
+    inputs:
+      job-name: helm-push-ngc:nvcf-container-cache:nv-ngc-devops:no-team
+      package-job: helm-package:nvcf-container-cache
+      ngc-key: $NGC_API_KEY_nv_ngc_devops
+      ngc-path: ${NGC_ORG_nv_ngc_devops}
+      extends: [.helm-push-ngc:nvcf-container-cache]
 
-# Define what triggers a pipeline, to prevent duplicate pipelines from running
-# [Documentation](https://docs.gitlab.com/ee/ci/jobs/job_control.html#avoid-duplicate-pipelines)
+  - component: gitlab-master.nvidia.com/cds/cds-components/helm-push-ngc@0.16.6
+    inputs:
+      job-name: helm-push-ngc:nvcf-container-cache:nvcf-internal:no-team
+      package-job: helm-package:nvcf-container-cache
+      ngc-key: $NGC_PUSH_SERVICE_KEY_NVCF_INTERNAL
+      ngc-path: ${NGC_ORG_nvcf_internal}
+      extends: [.helm-push-ngc:nvcf-container-cache]
+
+###########################################
+# Common Settings
+###########################################
+
+default:
+  tags:
+    - prod
+    - eks
+    - nvcf-cds
+
+.common-settings:
+  image: ${CI_REGISTRY}/cds/cds-containers/tools:latest
+
+stages:
+  - check
+  - code-quality
+  - package
+  - publish
+
 workflow:
   rules:
-    - if: $CI_MERGE_REQUEST_TITLE =~ /^\[\s*[Ss][Kk][Ii][Pp]([_\-]|\s*)[Cc][Ii]\s*\].*/
-      when: never
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: always # Trigger Pipeline Creation when running a scheduled CI job
-    - if: $CI_SKIP == "true"
-      when: never # Allow Skipping CI with environment variable. Pipeline must still pass before MR is able to be merged!
-    - if: $CI_PIPELINE_SOURCE == "push"
-      when: never # Do not trigger CI pipelines on push events outside of a "merge_request_event"
-    - when: always
-
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
-  NGINX_IMAGE_NAME: nvcr.io/nvidian/kaze/container-cache
-  NGINX_IMAGE_TAG: $CI_COMMIT_TAG
-  CERT_WATCHER_IMAGE_NAME: nvcr.io/nvidian/kaze/container-cache-cert-watcher
-  CERT_WATCHER_IMAGE_TAG: $CI_COMMIT_TAG
-  COMPONENT_NAME: container-cache
+  NGC_ORG_nv_ngc_devops: nv-ngc-devops
+  NGC_ORG_nvcf_internal: 0544956542906249
 
-build-image:
-  stage: build
-  tags: ["build"]
-  script:
-    - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
-    - echo $CI_JOB_TOKEN | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
-    - docker build -t ${CI_REGISTRY_IMAGE}/nginx:${CI_PIPELINE_ID}  -f Dockerfile.containerd .
-    - docker push  ${CI_REGISTRY_IMAGE}/nginx:${CI_PIPELINE_ID}
-    - cd gfn/cert-watcher
-    - docker build -t ${CI_REGISTRY_IMAGE}/cert-watcher:${CI_PIPELINE_ID} -f Dockerfile.containerd .
-    - docker push ${CI_REGISTRY_IMAGE}/cert-watcher:${CI_PIPELINE_ID}
-release-nginx-image:
-  stage: release
-  tags: ["build"]
-  rules:
-    - if: $CI_COMMIT_TAG # Runs when a tag is created
-  script:
-    - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
-    - docker build -t ${NGINX_IMAGE_NAME}:${NGINX_IMAGE_TAG} -f Dockerfile.containerd .
-    - docker push ${NGINX_IMAGE_NAME}:${NGINX_IMAGE_TAG}
+#####################
+# package
+#####################
 
-release-cert-update:
-  stage: release
-  tags: ["build"]
+.helm-package:
+  stage: package
+  before_script:
+    - helm repo add ${NGC_ORG_nv_ngc_devops} https://helm.ngc.nvidia.com/${NGC_ORG_nv_ngc_devops} --username '$oauthtoken' --password $NGC_API_KEY_nv_ngc_devops
+    - helm repo add ${NGC_ORG_nvcf_internal} https://helm.ngc.nvidia.com/${NGC_ORG_nvcf_internal} --username '$oauthtoken' --password $NGC_PUSH_SERVICE_KEY_NVCF_INTERNAL
+    - helm repo update
+
+#####################
+# publish
+#####################
+
+# Helm
+.helm-push-ngc:nvcf-container-cache:
+  stage: publish
   rules:
-    - if: $CI_COMMIT_TAG # Runs when a tag is created
-  script:
-    - cd gfn/cert-watcher
-    - echo $NGC_API_KEY | docker login -u "\$oauthtoken" nvcr.io --password-stdin
-    - docker build -t ${CERT_WATCHER_IMAGE_NAME}:${CERT_WATCHER_IMAGE_TAG} -f Dockerfile.containerd .
-    - docker push ${CERT_WATCHER_IMAGE_NAME}:${CERT_WATCHER_IMAGE_TAG}
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - deploy/Chart.yaml
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
