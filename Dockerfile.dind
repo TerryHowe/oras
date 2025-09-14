@@ -27,7 +27,6 @@ RUN apk add --no-cache \
 # Set Go environment
 ENV GO_VERSION="1.25.1"
 RUN curl -L -O https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz
-# RUN curl -O https://go.dev/dl/go1.25.1.linux-arm64.tar.gz
 RUN tar -C /usr/local -xzf go${GO_VERSION}.linux-arm64.tar.gz
 ENV GOPATH=/usr/local/go/bin
 ENV CGO_ENABLED=1
@@ -41,9 +40,6 @@ COPY . .
 
 # Build ORAS
 RUN make
-
-# Expose Docker daemon port
-EXPOSE 2376
 
 # Start Docker daemon and keep container running
 CMD ["dockerd", "--host=unix:///var/run/docker.sock"]
