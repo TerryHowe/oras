@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export ORAS_REGISTRY_PORT="5000"
+export ORAS_REGISTRY_PORT="15000"
 export ORAS_REGISTRY_HOST="localhost:${ORAS_REGISTRY_PORT}"
-export ORAS_REGISTRY_FALLBACK_PORT="6000"
+export ORAS_REGISTRY_FALLBACK_PORT="16000"
 export ORAS_REGISTRY_FALLBACK_HOST="localhost:${ORAS_REGISTRY_FALLBACK_PORT}"
-export ZOT_REGISTRY_PORT="7000"
+export ZOT_REGISTRY_PORT="17000"
 export ZOT_REGISTRY_HOST="localhost:${ZOT_REGISTRY_PORT}"
 export ORAS_CTR_NAME="oras-e2e"
 export UPSTREAM_CTR_NAME="oras-e2e-fallback"
@@ -59,9 +59,9 @@ echo "  prepared : upstream distribution  "
 
 echo " >>> preparing: zot >>> "
 try_clean_up $ZOT_CTR_NAME
-docker run --pull always -dp $ZOT_REGISTRY_PORT:5000 \
+docker run --network test-network --pull always -dp $ZOT_REGISTRY_PORT:15000 \
   --name $ZOT_CTR_NAME \
   -u $(id -u $(whoami)) \
   --mount type=bind,source="${e2e_root}/testdata/zot/",target=/etc/zot \
-  --rm ghcr.io/project-zot/zot-linux-amd64:v2.1.1
+  --rm ghcr.io/project-zot/zot-linux-arm64:v2.1.1
 echo " <<< prepared : zot <<< "

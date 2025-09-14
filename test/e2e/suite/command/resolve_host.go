@@ -160,7 +160,7 @@ var _ = Describe("1.1 registry users:", func() {
 			It("should copy an image with overridden resolve DNS rules for both source and destination registry", func() {
 				repo := testRepo("cp/override")
 				tag := "copied"
-				flags := append(append(to, from...), "--resolve", mockedHost+":80:1.1.1.1:5000")
+				flags := append(append(to, from...), "--resolve", mockedHost+":80:1.1.1.1:15000")
 				ORAS(append([]string{"cp", RegistryRef(mockedHost, ImageRepo, foobar.Tag), RegistryRef(mockedHost, repo, tag)}, flags...)...).
 					MatchStatus(foobarStates, true, len(foobarStates)).
 					Exec()

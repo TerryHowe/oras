@@ -70,8 +70,8 @@ var _ = Describe("ORAS beginners:", func() {
 				Expect(helpStr).To(ContainSubstring("go-template"))
 
 				// Check for example in help text
-				Expect(helpStr).To(ContainSubstring("oras repo ls localhost:5000 --format json"))
-				Expect(helpStr).To(ContainSubstring("oras repo ls localhost:5000 --format go-template"))
+				Expect(helpStr).To(ContainSubstring("oras repo ls localhost:15000 --format json"))
+				Expect(helpStr).To(ContainSubstring("oras repo ls localhost:15000 --format go-template"))
 			})
 		})
 		When("running `repo tags`", func() {
@@ -109,8 +109,8 @@ var _ = Describe("ORAS beginners:", func() {
 				Expect(helpStr).To(ContainSubstring("go-template"))
 
 				// Check for example in help text
-				Expect(helpStr).To(ContainSubstring("oras repo tags localhost:5000/hello --format json"))
-				Expect(helpStr).To(ContainSubstring("oras repo tags localhost:5000/hello --format go-template"))
+				Expect(helpStr).To(ContainSubstring("oras repo tags localhost:15000/hello --format json"))
+				Expect(helpStr).To(ContainSubstring("oras repo tags localhost:15000/hello --format go-template"))
 			})
 		})
 	})

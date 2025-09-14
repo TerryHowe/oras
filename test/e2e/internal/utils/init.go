@@ -42,7 +42,7 @@ var ZOTHost string
 func init() {
 	Host = os.Getenv(RegHostKey)
 	if Host == "" {
-		Host = "localhost:5000"
+		Host = "localhost:15000"
 		fmt.Fprintf(os.Stderr, "cannot find host name in %s, using %s instead\n", RegHostKey, Host)
 	}
 	ref := registry.Reference{
@@ -54,7 +54,7 @@ func init() {
 
 	FallbackHost = os.Getenv(FallbackRegHostKey)
 	if FallbackHost == "" {
-		FallbackHost = "localhost:6000"
+		FallbackHost = "localhost:16000"
 		fmt.Fprintf(os.Stderr, "cannot find fallback host name in %s, using %s instead\n", FallbackRegHostKey, FallbackHost)
 	}
 	ref.Registry = FallbackHost
@@ -64,7 +64,7 @@ func init() {
 
 	ZOTHost = os.Getenv(ZOTHostKey)
 	if ZOTHost == "" {
-		ZOTHost = "localhost:7000"
+		ZOTHost = "localhost:17000"
 		fmt.Fprintf(os.Stderr, "cannot find zot host name in %s, using %s instead\n", ZOTHostKey, ZOTHost)
 	}
 	ref.Registry = ZOTHost
