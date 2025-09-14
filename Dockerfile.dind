@@ -18,13 +18,18 @@ RUN apk add --no-cache \
     bash \
     curl \
     git \
+    gcc \
+    libc-dev \
     make
 
 
 # Set Go environment
-RUN curl -o https://go.dev/dl/go1.25.1.linux-arm64.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.25.1.linux-arm64.tar.gz
-ENV GOPATH=/go
+ENV GO_VERSION="1.25.1"
+RUN curl -L -O https://go.dev/dl/go${GO_VERSION}.linux-arm64.tar.gz
+# RUN curl -O https://go.dev/dl/go1.25.1.linux-arm64.tar.gz
+RUN tar -C /usr/local -xzf go${GO_VERSION}.linux-arm64.tar.gz
+ENV GOPATH=/usr/local/go/bin
+ENV CGO_ENABLED=1
 ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
 
 # Create workspace
