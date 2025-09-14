@@ -19,6 +19,7 @@ RUN apk add --no-cache \
     curl \
     git \
     gcc \
+    coreutils \
     libc-dev \
     make
 
@@ -45,4 +46,4 @@ RUN make
 EXPOSE 2376
 
 # Start Docker daemon and keep container running
-CMD ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://0.0.0.0:2376"]
+CMD ["dockerd", "--host=unix:///var/run/docker.sock"]
