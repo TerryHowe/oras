@@ -115,3 +115,9 @@ type BlobPushHandler interface {
 	StartTracking(gt oras.GraphTarget) (oras.GraphTarget, error)
 	StopTracking() error
 }
+
+// BlobFetchHandler handles status output for blob fetch command.
+type BlobFetchHandler interface {
+	OnBlobDownloading() error
+	OnBlobDownloaded() error
+}

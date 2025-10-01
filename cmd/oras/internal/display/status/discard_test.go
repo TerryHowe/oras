@@ -48,3 +48,17 @@ func TestDiscardHandler_OnIndexPushed(t *testing.T) {
 		t.Errorf("DiscardHandler.OnIndexPushed() error = %v, wantErr nil", err)
 	}
 }
+
+func TestDiscardHandler_OnBlobDownloading(t *testing.T) {
+	testDiscard := NewDiscardHandler()
+	if err := testDiscard.OnBlobDownloading(); err != nil {
+		t.Errorf("DiscardHandler.OnBlobDownloading() error = %v, wantErr nil", err)
+	}
+}
+
+func TestDiscardHandler_OnBlobDownloaded(t *testing.T) {
+	testDiscard := NewDiscardHandler()
+	if err := testDiscard.OnBlobDownloaded(); err != nil {
+		t.Errorf("DiscardHandler.OnBlobDownloaded() error = %v, wantErr nil", err)
+	}
+}

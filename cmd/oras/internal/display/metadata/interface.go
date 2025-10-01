@@ -153,6 +153,13 @@ type BlobDeleteHandler interface {
 	OnBlobDeleted() error
 }
 
+// BlobFetchHandler handles metadata output for blob fetch events.
+type BlobFetchHandler interface {
+	Renderer
+
+	OnBlobFetched(target *option.Target) error
+}
+
 // RepoTagsHandler handles metadata output for repo tags command.
 type RepoTagsHandler interface {
 	Renderer

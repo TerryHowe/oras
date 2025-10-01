@@ -34,3 +34,10 @@ func TestDiscardHandler_OnManifestPushed(t *testing.T) {
 		t.Errorf("DiscardHandler.OnManifestPushed() error = %v, wantErr nil", err)
 	}
 }
+
+func TestDiscardHandler_OnBlobFetched(t *testing.T) {
+	testDiscard := NewDiscardHandler()
+	if err := testDiscard.OnBlobFetched(nil); err != nil {
+		t.Errorf("DiscardHandler.OnBlobFetched() error = %v, wantErr nil", err)
+	}
+}

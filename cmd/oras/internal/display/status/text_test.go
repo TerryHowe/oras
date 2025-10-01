@@ -395,3 +395,21 @@ func TestTextRestoreHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestTextBlobFetchHandler_OnBlobDownloading(t *testing.T) {
+	builder.Reset()
+	bfh := NewTextBlobFetchHandler(printer, mockFetcher.OciImage)
+	if bfh.OnBlobDownloading() != nil {
+		t.Error("OnBlobDownloading() should not return an error")
+	}
+	validatePrinted(t, "Downloading 0b442c23c1dd oci-image")
+}
+
+func TestTextBlobFetchHandler_OnBlobDownloaded(t *testing.T) {
+	builder.Reset()
+	bfh := NewTextBlobFetchHandler(printer, mockFetcher.OciImage)
+	if bfh.OnBlobDownloaded() != nil {
+		t.Error("OnBlobDownloaded() should not return an error")
+	}
+	validatePrinted(t, "Downloaded  0b442c23c1dd oci-image")
+}

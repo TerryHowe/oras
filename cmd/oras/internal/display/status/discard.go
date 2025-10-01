@@ -164,3 +164,13 @@ func (DiscardHandler) StartTracking(gt oras.GraphTarget) (oras.GraphTarget, erro
 func (DiscardHandler) StopTracking() error {
 	return nil
 }
+
+// OnBlobDownloading implements BlobFetchHandler.
+func (DiscardHandler) OnBlobDownloading() error {
+	return nil
+}
+
+// OnBlobDownloaded implements BlobFetchHandler.
+func (DiscardHandler) OnBlobDownloaded() error {
+	return nil
+}

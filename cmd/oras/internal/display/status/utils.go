@@ -75,6 +75,12 @@ const (
 	IndexPromptUpdated  = "Updated  "
 )
 
+// Prompts for blob fetch events.
+const (
+	BlobFetchPromptDownloading = "Downloading"
+	BlobFetchPromptDownloaded  = "Downloaded "
+)
+
 // DeduplicatedFilter filters out deduplicated descriptors.
 func DeduplicatedFilter(committed *sync.Map) func(desc ocispec.Descriptor) bool {
 	return func(desc ocispec.Descriptor) bool {

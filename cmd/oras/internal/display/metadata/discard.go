@@ -54,3 +54,8 @@ func (Discard) OnIndexCreated(ocispec.Descriptor) {}
 func (Discard) OnBlobPushed(target *option.Target) error {
 	return nil
 }
+
+// OnBlobFetched implements BlobFetchHandler.
+func (Discard) OnBlobFetched(target *option.Target) error {
+	return nil
+}

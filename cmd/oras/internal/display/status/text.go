@@ -454,3 +454,27 @@ func (bph *TextBlobPushHandler) StartTracking(gt oras.GraphTarget) (oras.GraphTa
 func (bph *TextBlobPushHandler) StopTracking() error {
 	return nil
 }
+
+// TextBlobFetchHandler handles status output for blob fetch events.
+type TextBlobFetchHandler struct {
+	desc    ocispec.Descriptor
+	printer *output.Printer
+}
+
+// NewTextBlobFetchHandler returns a new handler for blob fetch events.
+func NewTextBlobFetchHandler(printer *output.Printer, desc ocispec.Descriptor) BlobFetchHandler {
+	return &TextBlobFetchHandler{
+		desc:    desc,
+		printer: printer,
+	}
+}
+
+// OnBlobDownloading implements BlobFetchHandler.
+func (bfh *TextBlobFetchHandler) OnBlobDownloading() error {
+	return bfh.printer.PrintStatus(bfh.desc, BlobFetchPromptDownloading)
+}
+
+// OnBlobDownloaded implements BlobFetchHandler.
+func (bfh *TextBlobFetchHandler) OnBlobDownloaded() error {
+	return bfh.printer.PrintStatus(bfh.desc, BlobFetchPromptDownloaded)
+}

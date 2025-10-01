@@ -28,6 +28,9 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras/cmd/oras/internal/argument"
 	"oras.land/oras/cmd/oras/internal/command"
+	"oras.land/oras/cmd/oras/internal/display"
+	"oras.land/oras/cmd/oras/internal/display/metadata"
+	"oras.land/oras/cmd/oras/internal/display/status"
 	"oras.land/oras/cmd/oras/internal/display/status/track"
 	oerrors "oras.land/oras/cmd/oras/internal/errors"
 	"oras.land/oras/cmd/oras/internal/option"
@@ -117,8 +120,27 @@ func fetchBlob(cmd *cobra.Command, opts *fetchBlobOptions) (fetchErr error) {
 	if err != nil {
 		return err
 	}
-	desc, err := opts.doFetch(ctx, src)
+
+	// Resolve descriptor first to create handlers
+	desc, err := oras.Resolve(ctx, src, opts.Reference, oras.DefaultResolveOptions)
 	if err != nil {
+		return err
+	}
+
+	// Create handlers
+	discard := opts.outputPath == "" || opts.outputPath == "-" || opts.OutputDescriptor
+	statusHandler, metadataHandler := display.NewBlobFetchHandler(opts.Printer, desc, opts.TTY, discard)
+
+	// Fetch the blob
+	if opts.outputPath != "" {
+		desc, err = opts.doFetch(ctx, src, statusHandler, metadataHandler)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Render metadata
+	if err := metadataHandler.Render(); err != nil {
 		return err
 	}
 
@@ -136,7 +158,7 @@ func fetchBlob(cmd *cobra.Command, opts *fetchBlobOptions) (fetchErr error) {
 	return nil
 }
 
-func (opts *fetchBlobOptions) doFetch(ctx context.Context, src oras.ReadOnlyTarget) (desc ocispec.Descriptor, fetchErr error) {
+func (opts *fetchBlobOptions) doFetch(ctx context.Context, src oras.ReadOnlyTarget, statusHandler status.BlobFetchHandler, metadataHandler metadata.BlobFetchHandler) (desc ocispec.Descriptor, fetchErr error) {
 	var err error
 	if opts.outputPath == "" {
 		// fetch blob descriptor only
@@ -167,6 +189,10 @@ func (opts *fetchBlobOptions) doFetch(ctx context.Context, src oras.ReadOnlyTarg
 		writer = file
 	}
 
+	if err := statusHandler.OnBlobDownloading(); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
 	if opts.TTY == nil {
 		// none TTY output
 		if _, err = io.Copy(writer, vr); err != nil {
@@ -192,5 +218,14 @@ func (opts *fetchBlobOptions) doFetch(ctx context.Context, src oras.ReadOnlyTarg
 	if err := vr.Verify(); err != nil {
 		return ocispec.Descriptor{}, err
 	}
+
+	if err := statusHandler.OnBlobDownloaded(); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
+	if err := metadataHandler.OnBlobFetched(&opts.Target); err != nil {
+		return ocispec.Descriptor{}, err
+	}
+
 	return desc, nil
 }

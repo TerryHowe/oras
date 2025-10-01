@@ -22,6 +22,7 @@ import (
 
 	"oras.land/oras/internal/testutils"
 
+	"oras.land/oras/cmd/oras/internal/display/metadata"
 	"oras.land/oras/cmd/oras/internal/display/metadata/text"
 	"oras.land/oras/cmd/oras/internal/display/status"
 	"oras.land/oras/cmd/oras/internal/option"
@@ -183,6 +184,41 @@ func TestNewRestoreHandler(t *testing.T) {
 		}
 		if _, ok := metadataHandler.(*text.RestoreHandler); !ok {
 			t.Errorf("expected *text.RestoreHandler actual %v", reflect.TypeOf(metadataHandler))
+		}
+	})
+}
+
+func TestNewBlobFetchHandler(t *testing.T) {
+	printer := output.NewPrinter(os.Stdout, os.Stderr)
+	mockFetcher := testutils.NewMockFetcher()
+
+	t.Run("with TTY", func(t *testing.T) {
+		statusHandler, metadataHandler := NewBlobFetchHandler(printer, mockFetcher.OciImage, os.Stdout, false)
+		if _, ok := statusHandler.(*status.TTYBlobFetchHandler); !ok {
+			t.Errorf("expected *status.TTYBlobFetchHandler actual %v", reflect.TypeOf(statusHandler))
+		}
+		if _, ok := metadataHandler.(*text.BlobFetchHandler); !ok {
+			t.Errorf("expected *text.BlobFetchHandler actual %v", reflect.TypeOf(metadataHandler))
+		}
+	})
+
+	t.Run("without TTY", func(t *testing.T) {
+		statusHandler, metadataHandler := NewBlobFetchHandler(printer, mockFetcher.OciImage, nil, false)
+		if _, ok := statusHandler.(*status.TextBlobFetchHandler); !ok {
+			t.Errorf("expected *status.TextBlobFetchHandler actual %v", reflect.TypeOf(statusHandler))
+		}
+		if _, ok := metadataHandler.(*text.BlobFetchHandler); !ok {
+			t.Errorf("expected *text.BlobFetchHandler actual %v", reflect.TypeOf(metadataHandler))
+		}
+	})
+
+	t.Run("with discard", func(t *testing.T) {
+		statusHandler, metadataHandler := NewBlobFetchHandler(printer, mockFetcher.OciImage, os.Stdout, true)
+		if _, ok := statusHandler.(status.DiscardHandler); !ok {
+			t.Errorf("expected status.DiscardHandler actual %v", reflect.TypeOf(statusHandler))
+		}
+		if _, ok := metadataHandler.(metadata.Discard); !ok {
+			t.Errorf("expected metadata.Discard actual %v", reflect.TypeOf(metadataHandler))
 		}
 	})
 }

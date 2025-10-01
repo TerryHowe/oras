@@ -410,3 +410,27 @@ func (bph *TTYBlobPushHandler) OnBlobUploading() error {
 func (bph *TTYBlobPushHandler) OnBlobUploaded() error {
 	return nil
 }
+
+// TTYBlobFetchHandler handles TTY status output for blob fetch events.
+type TTYBlobFetchHandler struct {
+	desc ocispec.Descriptor
+	tty  *os.File
+}
+
+// NewTTYBlobFetchHandler returns a new handler for blob fetch events.
+func NewTTYBlobFetchHandler(tty *os.File, desc ocispec.Descriptor) BlobFetchHandler {
+	return &TTYBlobFetchHandler{
+		tty:  tty,
+		desc: desc,
+	}
+}
+
+// OnBlobDownloading implements BlobFetchHandler.
+func (bfh *TTYBlobFetchHandler) OnBlobDownloading() error {
+	return nil
+}
+
+// OnBlobDownloaded implements BlobFetchHandler.
+func (bfh *TTYBlobFetchHandler) OnBlobDownloaded() error {
+	return nil
+}

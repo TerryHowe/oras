@@ -281,3 +281,17 @@ func TestTTYRestoreHandler_PostCopy_errPrompt(t *testing.T) {
 		t.Errorf("PostCopy() should return expected error got %v", err)
 	}
 }
+
+func TestTTYBlobFetchHandler_OnBlobDownloading(t *testing.T) {
+	bfh := NewTTYBlobFetchHandler(os.Stdout, mockFetcher.OciImage)
+	if err := bfh.OnBlobDownloading(); err != nil {
+		t.Error("OnBlobDownloading() should not return an error")
+	}
+}
+
+func TestTTYBlobFetchHandler_OnBlobDownloaded(t *testing.T) {
+	bfh := NewTTYBlobFetchHandler(os.Stdout, mockFetcher.OciImage)
+	if err := bfh.OnBlobDownloaded(); err != nil {
+		t.Error("OnBlobDownloaded() should not return an error")
+	}
+}

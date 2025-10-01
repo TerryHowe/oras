@@ -267,6 +267,17 @@ func NewBlobDeleteHandler(printer *output.Printer, target *option.Target) metada
 	return text.NewBlobDeleteHandler(printer, target)
 }
 
+// NewBlobFetchHandler returns blob fetch handlers.
+func NewBlobFetchHandler(printer *output.Printer, desc ocispec.Descriptor, tty *os.File, discard bool) (status.BlobFetchHandler, metadata.BlobFetchHandler) {
+	if discard {
+		return status.NewDiscardHandler(), metadata.NewDiscardHandler()
+	}
+	if tty != nil {
+		return status.NewTTYBlobFetchHandler(tty, desc), text.NewBlobFetchHandler(printer, desc)
+	}
+	return status.NewTextBlobFetchHandler(printer, desc), text.NewBlobFetchHandler(printer, desc)
+}
+
 // NewRepoTagsHandler returns a repo tags handler.
 func NewRepoTagsHandler(out io.Writer, format option.Format) (metadata.RepoTagsHandler, error) {
 	var handler metadata.RepoTagsHandler
