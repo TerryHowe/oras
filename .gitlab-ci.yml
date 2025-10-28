@@ -46,8 +46,12 @@ stages:
 
 workflow:
   rules:
+    # Run pipeline on merge requests (for testing/validation only)
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # Run pipeline on main branch (for manual operations)
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # Run pipeline on tags (for automatic chart publishing)
+    - if: $CI_COMMIT_TAG
 
 variables:
   NGC_ORG_nv_ngc_devops: nv-ngc-devops
@@ -59,6 +63,15 @@ variables:
 
 .helm-package:
   stage: package
+  rules:
+    # Package chart when a tag is created (for publishing)
+    - if: '$CI_COMMIT_TAG'
+      when: always
+    # Allow manual packaging on main branch (for testing)
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+    # Skip packaging on MR events (no need to package if not publishing)
+    - when: never
   before_script:
     - helm repo add ${NGC_ORG_nv_ngc_devops} https://helm.ngc.nvidia.com/${NGC_ORG_nv_ngc_devops} --username '$oauthtoken' --password $NGC_API_KEY_nv_ngc_devops
     - helm repo add ${NGC_ORG_nvcf_internal} https://helm.ngc.nvidia.com/${NGC_ORG_nvcf_internal} --username '$oauthtoken' --password $NGC_PUSH_SERVICE_KEY_NVCF_INTERNAL
@@ -68,13 +81,13 @@ variables:
 # publish
 #####################
 
-# Helm
+# Helm - Only publish on tags, not on MR merges
 .helm-push-ngc:nvcf-container-cache:
   stage: publish
   rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      changes:
-        - deploy/Chart.yaml
+    # Automatically publish chart when a tag is created
+    - if: '$CI_COMMIT_TAG'
       when: always
-    - if: '$CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+    # Allow manual publishing on main branch for testing (optional)
+    - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
