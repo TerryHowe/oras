@@ -30,7 +30,7 @@ include:
       job-name: helm-push-ngc:nvcf-container-cache:nvstaging:nvcf-byoc
       package-job: helm-package:nvcf-container-cache
       ngc-key: $NGC_API_KEY_nv_ngc_devops
-      ngc-path: ${NGC_ORG_nvstaging}
+      ngc-path: nvstaging/nvcf-byoc
       extends: [.helm-push-ngc:nvcf-container-cache]
 
 ###########################################
@@ -64,7 +64,7 @@ workflow:
 variables:
   NGC_ORG_nv_ngc_devops: nv-ngc-devops
   NGC_ORG_nvcf_internal: 0544956542906249
-  NGC_ORG_nvstaging: nvstaging/nvcf-byoc
+  NGC_ORG_nvstaging: nvstaging
 
 #####################
 # package
@@ -84,7 +84,7 @@ variables:
   before_script:
     - helm repo add ${NGC_ORG_nv_ngc_devops} https://helm.ngc.nvidia.com/${NGC_ORG_nv_ngc_devops} --username '$oauthtoken' --password $NGC_API_KEY_nv_ngc_devops
     - helm repo add ${NGC_ORG_nvcf_internal} https://helm.ngc.nvidia.com/${NGC_ORG_nvcf_internal} --username '$oauthtoken' --password $NGC_PUSH_SERVICE_KEY_NVCF_INTERNAL
-    - helm repo add ${NGC_ORG_nvstaging} https://helm.ngc.nvidia.com/${NGC_ORG_nvstaging} --username '$oauthtoken' --password $NGC_API_KEY_nv_ngc_devops
+    - helm repo add ${NGC_ORG_nvstaging} https://helm.ngc.nvidia.com/nvstaging/nvcf-byoc --username '$oauthtoken' --password $NGC_API_KEY_nv_ngc_devops
     - helm repo update
 
 #####################
