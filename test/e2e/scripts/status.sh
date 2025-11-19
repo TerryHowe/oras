@@ -46,35 +46,24 @@ echo ""
 echo "Registry Health Checks:"
 echo "-----------------------"
 
-# Check Docker Registry
-DOCKER_POD=$(kubectl get pods -n oras-e2e-tests -l app=docker-registry -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-if [ -n "$DOCKER_POD" ]; then
-    echo -n "Docker Registry v2:   "
-    if kubectl exec -n oras-e2e-tests "$DOCKER_POD" -- wget -q -O- http://localhost:5000/v2/ &> /dev/null; then
-        echo "✓ Healthy"
-    else
-        echo "✗ Unhealthy"
-    fi
-fi
+# Helper function to check pod readiness
+check_pod_health() {
+    local app_label=$1
+    local registry_name=$2
 
-# Check Fallback Registry
-FALLBACK_POD=$(kubectl get pods -n oras-e2e-tests -l app=fallback-registry -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-if [ -n "$FALLBACK_POD" ]; then
-    echo -n "Fallback Registry:    "
-    if kubectl exec -n oras-e2e-tests "$FALLBACK_POD" -- wget -q -O- http://localhost:5000/v2/ &> /dev/null; then
-        echo "✓ Healthy"
-    else
-        echo "✗ Unhealthy"
-    fi
-fi
+    local pod_status=$(kubectl get pods -n oras-e2e-tests -l app=$app_label -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
 
-# Check Zot Registry
-ZOT_POD=$(kubectl get pods -n oras-e2e-tests -l app=zot-registry -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-if [ -n "$ZOT_POD" ]; then
-    echo -n "Zot Registry:         "
-    if kubectl exec -n oras-e2e-tests "$ZOT_POD" -- wget -q -O- http://localhost:5000/v2/ &> /dev/null; then
+    echo -n "$registry_name"
+    if [ "$pod_status" = "True" ]; then
         echo "✓ Healthy"
+    elif [ -z "$pod_status" ]; then
+        echo "✗ Not Found"
     else
         echo "✗ Unhealthy"
     fi
-fi
+}
+
+# Check all registries using pod readiness status
+check_pod_health "docker-registry" "Docker Registry v2:   "
+check_pod_health "fallback-registry" "Fallback Registry:    "
+check_pod_health "zot-registry" "Zot Registry:         "
