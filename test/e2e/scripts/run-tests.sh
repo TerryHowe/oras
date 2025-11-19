@@ -93,8 +93,12 @@ echo "==================================="
 sleep 2
 
 # Check job conditions
-JOB_SUCCEEDED=$(kubectl get job oras-e2e-tests -n oras-e2e-tests -o jsonpath='{.status.succeeded}' 2>/dev/null || echo "0")
-JOB_FAILED=$(kubectl get job oras-e2e-tests -n oras-e2e-tests -o jsonpath='{.status.failed}' 2>/dev/null || echo "0")
+JOB_SUCCEEDED=$(kubectl get job oras-e2e-tests -n oras-e2e-tests -o jsonpath='{.status.succeeded}' 2>/dev/null)
+JOB_FAILED=$(kubectl get job oras-e2e-tests -n oras-e2e-tests -o jsonpath='{.status.failed}' 2>/dev/null)
+
+# Handle empty strings by defaulting to 0
+JOB_SUCCEEDED=${JOB_SUCCEEDED:-0}
+JOB_FAILED=${JOB_FAILED:-0}
 
 if [ "$JOB_SUCCEEDED" -ge 1 ]; then
     echo "✓ Tests passed successfully!"
