@@ -22,6 +22,23 @@ PROJECT_ROOT="${SCRIPT_DIR}/../../.."
 IMAGE_NAME="${IMAGE_NAME:-oras-e2e-tests}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 FULL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
+PLATFORM="${PLATFORM:-$(uname -m)}"
+
+# Normalize platform names
+case "$PLATFORM" in
+    x86_64|amd64)
+        PLATFORM="linux/amd64"
+        ;;
+    aarch64|arm64)
+        PLATFORM="linux/arm64"
+        ;;
+    linux/*)
+        # Already in correct format
+        ;;
+    *)
+        echo "Warning: Unknown platform '$PLATFORM', using as-is"
+        ;;
+esac
 
 # Determine build context
 BUILD_CONTEXT="${PROJECT_ROOT}"
@@ -29,12 +46,14 @@ DOCKERFILE="${SCRIPT_DIR}/../Dockerfile"
 
 echo "Building ORAS e2e test image..."
 echo "  Image:      ${FULL_IMAGE}"
+echo "  Platform:   ${PLATFORM}"
 echo "  Dockerfile: ${DOCKERFILE}"
 echo "  Context:    ${BUILD_CONTEXT}"
 echo ""
 
 # Build the image
 docker build \
+  --platform "${PLATFORM}" \
   -f "${DOCKERFILE}" \
   -t "${FULL_IMAGE}" \
   "${BUILD_CONTEXT}"
@@ -81,3 +100,7 @@ echo "     ./test/e2e/scripts/deploy.sh"
 echo ""
 echo "  2. Run e2e tests as a Kubernetes job:"
 echo "     ./test/e2e/scripts/run-tests.sh"
+echo ""
+echo "To build for a different architecture:"
+echo "  PLATFORM=linux/amd64 ./test/e2e/scripts/build-image.sh"
+echo "  PLATFORM=linux/arm64 ./test/e2e/scripts/build-image.sh"

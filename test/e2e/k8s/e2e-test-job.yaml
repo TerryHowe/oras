@@ -46,6 +46,11 @@ spec:
           value: "fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
         - name: ZOT_REGISTRY_HOST
           value: "zot-registry.oras-e2e-tests.svc.cluster.local:5000"
+        # Required by e2e tests (matching prepare.sh)
+        - name: ORAS_REGISTRY_HOST
+          value: "docker-registry.oras-e2e-tests.svc.cluster.local:5000"
+        - name: ORAS_REGISTRY_FALLBACK_HOST
+          value: "fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
         # Enable plain HTTP for in-cluster communication
         - name: ORAS_E2E_PLAIN_HTTP
           value: "true"
@@ -61,10 +66,10 @@ spec:
           echo "==================================="
           echo ""
           echo "Test Configuration:"
-          echo "  Docker Registry:   ${DOCKER_REGISTRY_HOST}"
-          echo "  Fallback Registry: ${FALLBACK_REGISTRY_HOST}"
-          echo "  Zot Registry:      ${ZOT_REGISTRY_HOST}"
-          echo "  Plain HTTP:        ${ORAS_E2E_PLAIN_HTTP}"
+          echo "  ORAS_REGISTRY_HOST:          ${ORAS_REGISTRY_HOST}"
+          echo "  ORAS_REGISTRY_FALLBACK_HOST: ${ORAS_REGISTRY_FALLBACK_HOST}"
+          echo "  ZOT_REGISTRY_HOST:           ${ZOT_REGISTRY_HOST}"
+          echo "  Plain HTTP:                  ${ORAS_E2E_PLAIN_HTTP}"
           echo ""
 
           # Wait for registries to be ready

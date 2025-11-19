@@ -57,6 +57,8 @@ kubectl run "$POD_NAME" \
     --env="DOCKER_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000" \
     --env="FALLBACK_REGISTRY_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000" \
     --env="ZOT_REGISTRY_HOST=zot-registry.oras-e2e-tests.svc.cluster.local:5000" \
+    --env="ORAS_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000" \
+    --env="ORAS_REGISTRY_FALLBACK_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000" \
     --env="ORAS_E2E_PLAIN_HTTP=true" \
     --env="ORAS_E2E_TIMEOUT=10m" \
     --command -- /bin/sh -c "sleep infinity"
@@ -71,8 +73,8 @@ echo "Interactive pod is ready!"
 echo ""
 echo "Environment variables set:"
 echo "  CGO_ENABLED=1"
-echo "  DOCKER_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000"
-echo "  FALLBACK_REGISTRY_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
+echo "  ORAS_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000"
+echo "  ORAS_REGISTRY_FALLBACK_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
 echo "  ZOT_REGISTRY_HOST=zot-registry.oras-e2e-tests.svc.cluster.local:5000"
 echo "  ORAS_E2E_PLAIN_HTTP=true"
 echo ""
