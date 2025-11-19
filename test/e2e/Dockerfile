@@ -63,13 +63,15 @@ echo "Building oras binary..."
 cd /workspace
 
 # Build oras using make (determines correct OS and ARCH automatically)
-make > /dev/null 2>&1
+make > out || cat out
 
-# Find the built binary
-ORAS_BIN=$(find /workspace/bin -name oras -type f | head -1)
+# Construct the binary path using Makefile logic: bin/$(OS)/$(ARCH)/$(CLI_EXE)
+ORAS_BIN="/workspace/bin/linux/amd64/oras"
 
-if [ -z "$ORAS_BIN" ]; then
-    echo "Error: oras binary not found after build"
+if [ ! -f "$ORAS_BIN" ]; then
+    echo "Error: oras binary not found at expected path: $ORAS_BIN"
+    echo "Available binaries:"
+    find /workspace/bin -name oras -type f 2>/dev/null || echo "  None found"
     exit 1
 fi
 
