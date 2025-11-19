@@ -32,7 +32,7 @@ COPY . .
 FROM golang:1.25-alpine
 
 # Install runtime dependencies including build tools for CGO (required for -race flag)
-RUN apk add --no-cache ca-certificates git curl gcc musl-dev make file
+RUN apk add --no-cache ca-certificates git curl wget bash gcc musl-dev make file
 
 # Set working directory
 WORKDIR /workspace
@@ -49,6 +49,55 @@ RUN go mod vendor
 RUN cd test/e2e && go install github.com/onsi/ginkgo/v2/ginkgo@latest
 ENV PATH="${PATH}:/go/bin"
 
-# Default command runs e2e tests with ginkgo
+# Create entrypoint script that builds oras and runs tests
+RUN cat > /entrypoint.sh <<'EOF'
+#!/bin/sh
+set -e
+
+echo "==================================="
+echo "ORAS E2E Test Environment Setup"
+echo "==================================="
+echo ""
+echo "Building oras binary..."
+
+cd /workspace
+
+# Build oras using make (determines correct OS and ARCH automatically)
+make > /dev/null 2>&1
+
+# Find the built binary
+ORAS_BIN=$(find /workspace/bin -name oras -type f | head -1)
+
+if [ -z "$ORAS_BIN" ]; then
+    echo "Error: oras binary not found after build"
+    exit 1
+fi
+
+echo "✓ Built oras binary: $ORAS_BIN"
+echo ""
+
+# Export ORAS_PATH for tests to use
+export ORAS_PATH="$ORAS_BIN"
+
+# Change to test directory
+cd /workspace/test/e2e
+
+# Run provided command or default to ginkgo tests
+if [ $# -eq 0 ]; then
+    echo "Running ginkgo tests..."
+    echo "-----------------------------------"
+    exec ginkgo -r -p --race suite
+else
+    # Execute the provided command with ORAS_PATH set
+    exec "$@"
+fi
+EOF
+
+RUN chmod +x /entrypoint.sh
+
+# Set working directory
 WORKDIR /workspace/test/e2e
-CMD ["ginkgo", "-r", "-p", "--race", "suite"]
+
+# Use the entrypoint script
+ENTRYPOINT ["/entrypoint.sh"]
+CMD []

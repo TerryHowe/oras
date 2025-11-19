@@ -48,6 +48,7 @@ echo "Creating interactive test pod..."
 echo ""
 
 # Create the interactive pod
+# Note: We override the entrypoint to prevent automatic build/test execution
 kubectl run "$POD_NAME" \
     --image=oras-e2e-tests:latest \
     --image-pull-policy=IfNotPresent \
@@ -80,7 +81,15 @@ echo "  ORAS_E2E_PLAIN_HTTP=true"
 echo ""
 echo "Working directory: /workspace/test/e2e"
 echo ""
-echo "To run tests manually:"
+echo "To build oras and run tests automatically:"
+echo "  /entrypoint.sh"
+echo ""
+echo "To build oras manually:"
+echo "  cd /workspace && make"
+echo "  export ORAS_PATH=\$(find /workspace/bin -name oras -type f | head -1)"
+echo ""
+echo "To run tests after building:"
+echo "  cd /workspace/test/e2e"
 echo "  ginkgo -r -p --race suite"
 echo ""
 echo "To run a specific test:"
