@@ -86,7 +86,7 @@ spec:
 
           # Run the tests
           cd /workspace
-          go test -v -race -timeout ${ORAS_E2E_TIMEOUT} ./test/e2e/...
+          go test -mod=mod -v -race -timeout ${ORAS_E2E_TIMEOUT} ./test/e2e/...
           TEST_EXIT_CODE=$?
 
           echo ""

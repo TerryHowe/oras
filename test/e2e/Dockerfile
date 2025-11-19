@@ -23,7 +23,6 @@ WORKDIR /workspace
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
 RUN go mod download
-RUN go mod vendor
 
 # Copy the entire source code
 COPY . .
@@ -42,4 +41,4 @@ COPY --from=builder /go/pkg /go/pkg
 COPY --from=builder /workspace /workspace
 
 # Default command runs e2e tests
-CMD ["go", "test", "-v", "-race", "./test/e2e/..."]
+CMD ["go", "test", "-mod=mod", "-v", "-race", "./test/e2e/..."]
