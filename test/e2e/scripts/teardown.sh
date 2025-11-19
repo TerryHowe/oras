@@ -24,6 +24,10 @@ echo "Tearing down ORAS e2e test registries from Kubernetes..."
 echo "Deleting Zot Registry..."
 kubectl delete -f "${K8S_DIR}/zot-registry.yaml" --ignore-not-found=true
 
+# Delete Fallback Registry
+echo "Deleting Fallback Registry..."
+kubectl delete -f "${K8S_DIR}/fallback-registry.yaml" --ignore-not-found=true
+
 # Delete Docker Registry
 echo "Deleting Docker Registry..."
 kubectl delete -f "${K8S_DIR}/docker-registry.yaml" --ignore-not-found=true

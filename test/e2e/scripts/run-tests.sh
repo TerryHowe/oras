@@ -30,6 +30,7 @@ fi
 echo "Checking if registries are ready..."
 if ! kubectl wait --for=condition=available --timeout=60s \
     deployment/docker-registry \
+    deployment/fallback-registry \
     deployment/zot-registry \
     -n oras-e2e-tests &> /dev/null; then
     echo "Error: Registries are not ready."

@@ -24,8 +24,9 @@ fi
 echo "Setting up port forwarding for ORAS e2e test registries..."
 echo ""
 echo "Local endpoints will be:"
-echo "  Docker Registry: localhost:5000"
-echo "  Zot Registry:    localhost:5001"
+echo "  Docker Registry:   localhost:5000"
+echo "  Fallback Registry: localhost:6000"
+echo "  Zot Registry:      localhost:7000"
 echo ""
 echo "Press Ctrl+C to stop port forwarding"
 echo ""
@@ -37,8 +38,12 @@ trap 'echo ""; echo "Stopping port forwarding..."; kill $(jobs -p) 2>/dev/null; 
 kubectl port-forward -n oras-e2e-tests service/docker-registry 5000:5000 &
 DOCKER_PF_PID=$!
 
+# Port forward Fallback Registry
+kubectl port-forward -n oras-e2e-tests service/fallback-registry 6000:5000 &
+FALLBACK_PF_PID=$!
+
 # Port forward Zot Registry
-kubectl port-forward -n oras-e2e-tests service/zot-registry 5001:5000 &
+kubectl port-forward -n oras-e2e-tests service/zot-registry 7000:5000 &
 ZOT_PF_PID=$!
 
 # Wait for port forwards to be established
@@ -49,7 +54,11 @@ if ! curl -s http://localhost:5000/v2/ > /dev/null 2>&1; then
     echo "Warning: Docker Registry port forward may not be ready yet"
 fi
 
-if ! curl -s http://localhost:5001/v2/ > /dev/null 2>&1; then
+if ! curl -s http://localhost:6000/v2/ > /dev/null 2>&1; then
+    echo "Warning: Fallback Registry port forward may not be ready yet"
+fi
+
+if ! curl -s http://localhost:7000/v2/ > /dev/null 2>&1; then
     echo "Warning: Zot Registry port forward may not be ready yet"
 fi
 

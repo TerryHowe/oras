@@ -49,8 +49,19 @@ echo "-----------------------"
 # Check Docker Registry
 DOCKER_POD=$(kubectl get pods -n oras-e2e-tests -l app=docker-registry -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 if [ -n "$DOCKER_POD" ]; then
-    echo -n "Docker Registry v2: "
+    echo -n "Docker Registry v2:   "
     if kubectl exec -n oras-e2e-tests "$DOCKER_POD" -- wget -q -O- http://localhost:5000/v2/ &> /dev/null; then
+        echo "✓ Healthy"
+    else
+        echo "✗ Unhealthy"
+    fi
+fi
+
+# Check Fallback Registry
+FALLBACK_POD=$(kubectl get pods -n oras-e2e-tests -l app=fallback-registry -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+if [ -n "$FALLBACK_POD" ]; then
+    echo -n "Fallback Registry:    "
+    if kubectl exec -n oras-e2e-tests "$FALLBACK_POD" -- wget -q -O- http://localhost:5000/v2/ &> /dev/null; then
         echo "✓ Healthy"
     else
         echo "✗ Unhealthy"
@@ -60,7 +71,7 @@ fi
 # Check Zot Registry
 ZOT_POD=$(kubectl get pods -n oras-e2e-tests -l app=zot-registry -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 if [ -n "$ZOT_POD" ]; then
-    echo -n "Zot Registry:       "
+    echo -n "Zot Registry:         "
     if kubectl exec -n oras-e2e-tests "$ZOT_POD" -- wget -q -O- http://localhost:5000/v2/ &> /dev/null; then
         echo "✓ Healthy"
     else

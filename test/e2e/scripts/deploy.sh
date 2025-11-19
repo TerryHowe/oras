@@ -28,6 +28,10 @@ kubectl apply -f "${K8S_DIR}/namespace.yaml"
 echo "Deploying Docker Registry v2..."
 kubectl apply -f "${K8S_DIR}/docker-registry.yaml"
 
+# Deploy Fallback Registry
+echo "Deploying Fallback Registry..."
+kubectl apply -f "${K8S_DIR}/fallback-registry.yaml"
+
 # Deploy Zot Registry
 echo "Deploying Zot Registry..."
 kubectl apply -f "${K8S_DIR}/zot-registry.yaml"
@@ -36,6 +40,7 @@ kubectl apply -f "${K8S_DIR}/zot-registry.yaml"
 echo "Waiting for deployments to be ready..."
 kubectl wait --for=condition=available --timeout=300s \
   deployment/docker-registry \
+  deployment/fallback-registry \
   deployment/zot-registry \
   -n oras-e2e-tests
 
@@ -43,8 +48,9 @@ echo ""
 echo "Deployment complete!"
 echo ""
 echo "Registry endpoints (within cluster):"
-echo "  Docker Registry: docker-registry.oras-e2e-tests.svc.cluster.local:5000"
-echo "  Zot Registry:    zot-registry.oras-e2e-tests.svc.cluster.local:5000"
+echo "  Docker Registry:   docker-registry.oras-e2e-tests.svc.cluster.local:5000"
+echo "  Fallback Registry: fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
+echo "  Zot Registry:      zot-registry.oras-e2e-tests.svc.cluster.local:5000"
 echo ""
 echo "To access from your local machine, run:"
 echo "  ./test/e2e/scripts/port-forward.sh"

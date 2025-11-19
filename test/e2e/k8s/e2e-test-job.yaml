@@ -42,6 +42,8 @@ spec:
         # Registry endpoints accessible within the cluster
         - name: DOCKER_REGISTRY_HOST
           value: "docker-registry.oras-e2e-tests.svc.cluster.local:5000"
+        - name: FALLBACK_REGISTRY_HOST
+          value: "fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
         - name: ZOT_REGISTRY_HOST
           value: "zot-registry.oras-e2e-tests.svc.cluster.local:5000"
         # Enable plain HTTP for in-cluster communication
@@ -59,15 +61,17 @@ spec:
           echo "==================================="
           echo ""
           echo "Test Configuration:"
-          echo "  Docker Registry: ${DOCKER_REGISTRY_HOST}"
-          echo "  Zot Registry:    ${ZOT_REGISTRY_HOST}"
-          echo "  Plain HTTP:      ${ORAS_E2E_PLAIN_HTTP}"
+          echo "  Docker Registry:   ${DOCKER_REGISTRY_HOST}"
+          echo "  Fallback Registry: ${FALLBACK_REGISTRY_HOST}"
+          echo "  Zot Registry:      ${ZOT_REGISTRY_HOST}"
+          echo "  Plain HTTP:        ${ORAS_E2E_PLAIN_HTTP}"
           echo ""
 
           # Wait for registries to be ready
           echo "Waiting for registries to be ready..."
           for i in $(seq 1 30); do
             if wget -q -O- "http://${DOCKER_REGISTRY_HOST}/v2/" > /dev/null 2>&1 && \
+               wget -q -O- "http://${FALLBACK_REGISTRY_HOST}/v2/" > /dev/null 2>&1 && \
                wget -q -O- "http://${ZOT_REGISTRY_HOST}/v2/" > /dev/null 2>&1; then
               echo "✓ All registries are ready"
               break
