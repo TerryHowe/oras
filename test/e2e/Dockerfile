@@ -32,7 +32,7 @@ COPY . .
 FROM golang:1.25-alpine
 
 # Install runtime dependencies including build tools for CGO (required for -race flag)
-RUN apk add --no-cache ca-certificates git curl gcc musl-dev
+RUN apk add --no-cache ca-certificates git curl gcc musl-dev make file
 
 # Set working directory
 WORKDIR /workspace
