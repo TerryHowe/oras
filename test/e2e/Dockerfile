@@ -40,5 +40,8 @@ WORKDIR /workspace
 COPY --from=builder /go/pkg /go/pkg
 COPY --from=builder /workspace /workspace
 
+# Ensure module cache is properly set up
+RUN go mod download
+
 # Default command runs e2e tests
-CMD ["go", "test", "-mod=mod", "-v", "-race", "./test/e2e/..."]
+CMD ["go", "test", "-v", "-race", "./test/e2e/..."]
