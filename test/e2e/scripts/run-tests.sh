@@ -88,31 +88,42 @@ echo "==================================="
 echo "Checking job status..."
 echo "==================================="
 
-# Wait for job to complete and get status
-if kubectl wait --for=condition=complete --timeout=5m job/oras-e2e-tests -n oras-e2e-tests 2>/dev/null; then
+# After logs finish, check the job status directly
+# Wait a moment for the job status to be updated
+sleep 2
+
+# Check job conditions
+JOB_SUCCEEDED=$(kubectl get job oras-e2e-tests -n oras-e2e-tests -o jsonpath='{.status.succeeded}' 2>/dev/null || echo "0")
+JOB_FAILED=$(kubectl get job oras-e2e-tests -n oras-e2e-tests -o jsonpath='{.status.failed}' 2>/dev/null || echo "0")
+
+if [ "$JOB_SUCCEEDED" -ge 1 ]; then
     echo "✓ Tests passed successfully!"
     echo ""
     echo "To view logs again, run:"
     echo "  kubectl logs -n oras-e2e-tests job/oras-e2e-tests"
     exit 0
+elif [ "$JOB_FAILED" -ge 1 ]; then
+    echo "✗ Tests failed"
+    echo ""
+    echo "To view logs again, run:"
+    echo "  kubectl logs -n oras-e2e-tests job/oras-e2e-tests"
+    echo ""
+    echo "To debug the pod, run:"
+    echo "  kubectl describe pod $POD_NAME -n oras-e2e-tests"
+    exit 1
 else
-    # Check if job failed
-    if kubectl wait --for=condition=failed --timeout=1s job/oras-e2e-tests -n oras-e2e-tests 2>/dev/null; then
-        echo "✗ Tests failed"
+    # Job still running, wait for it to complete
+    echo "Job still running, waiting for completion..."
+    if kubectl wait --for=condition=complete --timeout=5m job/oras-e2e-tests -n oras-e2e-tests 2>/dev/null; then
+        echo "✓ Tests passed successfully!"
         echo ""
         echo "To view logs again, run:"
         echo "  kubectl logs -n oras-e2e-tests job/oras-e2e-tests"
-        echo ""
-        echo "To debug the pod, run:"
-        echo "  kubectl describe pod $POD_NAME -n oras-e2e-tests"
-        exit 1
+        exit 0
     else
-        echo "✗ Job did not complete within timeout"
+        echo "✗ Tests failed or timed out"
         echo ""
-        echo "To check job status:"
-        echo "  kubectl get job oras-e2e-tests -n oras-e2e-tests"
-        echo ""
-        echo "To view logs:"
+        echo "To view logs again, run:"
         echo "  kubectl logs -n oras-e2e-tests job/oras-e2e-tests"
         exit 1
     fi
