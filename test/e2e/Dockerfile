@@ -12,7 +12,7 @@
 # limitations under the License.
 
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git make
@@ -23,15 +23,16 @@ WORKDIR /workspace
 # Copy go mod files first for better caching
 COPY go.mod go.sum ./
 RUN go mod download
+RUN go mod vendor
 
 # Copy the entire source code
 COPY . .
 
 # Run stage
-FROM golang:1.24-alpine
+FROM golang:1.25-alpine
 
-# Install runtime dependencies
-RUN apk add --no-cache ca-certificates git curl
+# Install runtime dependencies including build tools for CGO (required for -race flag)
+RUN apk add --no-cache ca-certificates git curl gcc musl-dev
 
 # Set working directory
 WORKDIR /workspace

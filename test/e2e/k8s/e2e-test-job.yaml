@@ -36,6 +36,9 @@ spec:
         image: oras-e2e-tests:latest
         imagePullPolicy: IfNotPresent
         env:
+        # Enable CGO (required for -race flag)
+        - name: CGO_ENABLED
+          value: "1"
         # Registry endpoints accessible within the cluster
         - name: DOCKER_REGISTRY_HOST
           value: "docker-registry.oras-e2e-tests.svc.cluster.local:5000"
