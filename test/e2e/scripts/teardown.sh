@@ -18,7 +18,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 K8S_DIR="${SCRIPT_DIR}/../k8s"
 
-echo "Tearing down ORAS e2e test registries from Kubernetes..."
+echo "Tearing down ORAS e2e test resources from Kubernetes..."
+
+# Delete e2e test job
+echo "Deleting e2e test job..."
+kubectl delete -f "${K8S_DIR}/e2e-test-job.yaml" --ignore-not-found=true
 
 # Delete Zot Registry
 echo "Deleting Zot Registry..."
