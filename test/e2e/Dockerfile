@@ -45,5 +45,10 @@ COPY --from=builder /workspace /workspace
 RUN go mod download
 RUN go mod vendor
 
-# Default command runs e2e tests
-CMD ["go", "test", "-v", "-race", "./test/e2e/..."]
+# Install ginkgo test runner
+RUN cd test/e2e && go install github.com/onsi/ginkgo/v2/ginkgo@latest
+ENV PATH="${PATH}:/go/bin"
+
+# Default command runs e2e tests with ginkgo
+WORKDIR /workspace/test/e2e
+CMD ["ginkgo", "-r", "-p", "--race", "suite"]

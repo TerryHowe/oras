@@ -81,12 +81,12 @@ spec:
           done
 
           echo ""
-          echo "Running e2e tests..."
+          echo "Running e2e tests with ginkgo..."
           echo "-----------------------------------"
 
-          # Run the tests
-          cd /workspace
-          go test -v -race -timeout ${ORAS_E2E_TIMEOUT} ./test/e2e/...
+          # Run the tests with ginkgo
+          cd /workspace/test/e2e
+          ginkgo -r -p --race --timeout=${ORAS_E2E_TIMEOUT} suite
           TEST_EXIT_CODE=$?
 
           echo ""
