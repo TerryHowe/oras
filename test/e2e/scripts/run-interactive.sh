@@ -87,7 +87,7 @@ echo ""
 echo "To build oras manually:"
 echo "  cd /workspace && make >out 2>&1 || cat out"
 echo "  export ORAS_PATH=/workspace/bin/linux/amd64/oras"
-echo "  export PATH=${PATH}:/workspace/bin/linux/amd64"
+echo '  export PATH=${PATH}:/workspace/bin/linux/amd64'
 echo ""
 echo "To run tests after building:"
 echo "  cd /workspace/test/e2e"
