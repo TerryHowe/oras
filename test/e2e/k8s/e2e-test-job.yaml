@@ -53,6 +53,9 @@ spec:
           value: "fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
         - name: ORAS_PATH
           value: "/workspace/bin/linux/amd64/oras"
+        # Add ORAS binary directory to PATH
+        - name: PATH
+          value: "/workspace/bin/linux/amd64:/usr/local/go/bin:/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
         # Enable plain HTTP for in-cluster communication
         - name: ORAS_E2E_PLAIN_HTTP
           value: "true"

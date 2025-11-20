@@ -61,6 +61,7 @@ kubectl run "$POD_NAME" \
     --env="ORAS_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000" \
     --env="ORAS_REGISTRY_FALLBACK_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000" \
     --env="ORAS_PATH=/workspace/bin/linux/amd64/oras" \
+    --env="PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin:/workspace/bin/linux/amd64" \
     --env="ORAS_E2E_PLAIN_HTTP=true" \
     --env="ORAS_E2E_TIMEOUT=10m" \
     --command -- /bin/sh -c "sleep infinity"
