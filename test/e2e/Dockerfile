@@ -49,6 +49,9 @@ RUN go mod vendor
 RUN cd test/e2e && go install github.com/onsi/ginkgo/v2/ginkgo@latest
 ENV PATH="${PATH}:/go/bin"
 
+# Set plain HTTP mode for tests (registries in k8s use HTTP not HTTPS)
+ENV ORAS_E2E_PLAIN_HTTP="true"
+
 # Create entrypoint script that builds oras and runs tests
 RUN cat > /entrypoint.sh <<'EOF'
 #!/bin/sh

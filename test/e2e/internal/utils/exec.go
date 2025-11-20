@@ -58,6 +58,11 @@ type ExecOption struct {
 
 // ORAS returns default execution option for oras binary.
 func ORAS(args ...string) *ExecOption {
+	// Add --plain-http flag when ORAS_E2E_PLAIN_HTTP is set
+	// This is needed for Kubernetes environments where registries use HTTP
+	if os.Getenv("ORAS_E2E_PLAIN_HTTP") == "true" {
+		args = append([]string{"--plain-http"}, args...)
+	}
 	return Binary(orasBinary, args...)
 }
 
