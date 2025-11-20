@@ -60,6 +60,7 @@ kubectl run "$POD_NAME" \
     --env="ZOT_REGISTRY_HOST=zot-registry.oras-e2e-tests.svc.cluster.local:5000" \
     --env="ORAS_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000" \
     --env="ORAS_REGISTRY_FALLBACK_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000" \
+    --env="ORAS_PATH=/workspace/bin/linux/amd64/oras" \
     --env="ORAS_E2E_PLAIN_HTTP=true" \
     --env="ORAS_E2E_TIMEOUT=10m" \
     --command -- /bin/sh -c "sleep infinity"

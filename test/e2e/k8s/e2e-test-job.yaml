@@ -51,6 +51,8 @@ spec:
           value: "docker-registry.oras-e2e-tests.svc.cluster.local:5000"
         - name: ORAS_REGISTRY_FALLBACK_HOST
           value: "fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
+        - name: ORAS_PATH
+          value: "/workspace/bin/linux/amd64/oras"
         # Enable plain HTTP for in-cluster communication
         - name: ORAS_E2E_PLAIN_HTTP
           value: "true"

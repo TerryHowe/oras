@@ -13,6 +13,17 @@
 
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: zot-htpasswd
+  namespace: oras-e2e-tests
+type: Opaque
+stringData:
+  passwd_bcrypt: |
+    hello:$2y$05$7VA2NX15rMmt6Y14Ep7wReDybGvD8e7ko9tsxmvZQwnC4wBfG9Thy
+
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: zot-config
@@ -26,7 +37,12 @@ data:
       },
       "http": {
         "address": "0.0.0.0",
-        "port": "5000"
+        "port": "5000",
+        "auth": {
+          "htpasswd": {
+            "path": "/etc/zot-auth/passwd_bcrypt"
+          }
+        }
       },
       "log": {
         "level": "debug"
@@ -83,24 +99,36 @@ spec:
         - name: zot-config
           mountPath: /etc/zot
           readOnly: true
+        - name: zot-htpasswd
+          mountPath: /etc/zot-auth
+          readOnly: true
         - name: zot-storage
           mountPath: /var/lib/zot
         livenessProbe:
           httpGet:
             path: /v2/
             port: 5000
+            httpHeaders:
+            - name: Authorization
+              value: Basic aGVsbG86b3Jhcy10ZXN0
           initialDelaySeconds: 10
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /v2/
             port: 5000
+            httpHeaders:
+            - name: Authorization
+              value: Basic aGVsbG86b3Jhcy10ZXN0
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
       - name: zot-config
         configMap:
           name: zot-config
+      - name: zot-htpasswd
+        secret:
+          secretName: zot-htpasswd
       - name: zot-storage
         persistentVolumeClaim:
           claimName: zot-registry-pvc
