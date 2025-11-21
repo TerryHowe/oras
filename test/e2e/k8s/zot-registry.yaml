@@ -38,14 +38,10 @@ spec:
         - -c
         - |
           echo "Copying zot testdata to /etc/zot..."
-          # Use cp with trailing dot to copy all files including hidden ones
-          cp -a /workspace/test/e2e/testdata/zot/. /etc/zot/
+          # Use tar to properly preserve hard links when copying
+          cd /workspace/test/e2e/testdata/zot && tar cf - . | (cd /etc/zot && tar xf -)
           echo "Contents of /etc/zot:"
-          ls -la /etc/zot/
-          echo "Contents of /etc/zot/command:"
-          ls -la /etc/zot/command/
-          echo "Contents of /etc/zot/command/artifacts:"
-          ls -la /etc/zot/command/artifacts/
+          find /etc/zot/
           echo "Done."
         volumeMounts:
         - name: zot-data
