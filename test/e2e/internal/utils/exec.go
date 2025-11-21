@@ -64,7 +64,8 @@ func ORAS(args ...string) *ExecOption {
 		// cp/copy command uses --from-plain-http and --to-plain-http instead of --plain-http
 		if args[0] == "cp" || args[0] == "copy" {
 			args = append(args, "--from-plain-http", "--to-plain-http")
-		} else {
+		} else if args[0] != "version" {
+			// version command doesn't need --plain-http
 			args = append(args, "--plain-http")
 		}
 	}

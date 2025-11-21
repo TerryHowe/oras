@@ -47,8 +47,7 @@ spec:
           done
 
           # Copy passwd_bcrypt
-          mkdir -p /etc/docker/registry
-          cp $SRC_DIR/passwd_bcrypt /etc/docker/registry/passwd
+          cp $SRC_DIR/passwd_bcrypt /auth/passwd
 
           echo "Contents of /var/lib/registry:"
           ls -la /var/lib/registry/
@@ -59,7 +58,7 @@ spec:
         - name: registry-storage
           mountPath: /var/lib/registry
         - name: registry-auth
-          mountPath: /etc/docker/registry
+          mountPath: /auth
       containers:
       - name: registry
         image: ghcr.io/oras-project/registry:v1.0.0-rc.4
@@ -82,7 +81,8 @@ spec:
         - name: registry-storage
           mountPath: /var/lib/registry
         - name: registry-auth
-          mountPath: /etc/docker/registry
+          mountPath: /etc/docker/registry/passwd
+          subPath: passwd
         livenessProbe:
           httpGet:
             path: /v2/
