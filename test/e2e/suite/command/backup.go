@@ -99,7 +99,7 @@ var _ = Describe("ORAS beginners:", func() {
 			outDir := filepath.Join(tmpDir, "invalid-tag")
 
 			// Test with invalid tag format
-			ORAS("backup", "--output", outDir, "localhost:5000/repo:invalid+tag").ExpectFailure().
+			ORAS("backup", "--output", outDir, RegistryRef(Host, "repo", "invalid+tag")).ExpectFailure().
 				MatchErrKeyWords("Error:").Exec()
 		})
 

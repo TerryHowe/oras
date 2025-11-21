@@ -75,7 +75,7 @@ var _ = Describe("ORAS beginners:", func() {
 
 		It("should fail with appropriate error when invalid tag format provided", func() {
 			tmpDir := GinkgoT().TempDir()
-			ORAS("restore", "--input", tmpDir, "localhost:5000/repo:invalid+tag").ExpectFailure().
+			ORAS("restore", "--input", tmpDir, RegistryRef(Host, "repo", "invalid+tag")).ExpectFailure().
 				MatchErrKeyWords("Error:").Exec()
 		})
 
