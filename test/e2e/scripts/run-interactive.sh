@@ -93,7 +93,7 @@ echo '  export PATH=${PATH}:/workspace/bin/linux/amd64'
 echo ""
 echo "To run tests after building:"
 echo "  cd /workspace/test/e2e"
-echo "  ginkgo -r suite"
+echo "  ginkgo -r suite | tee out"
 echo ""
 echo "To run a specific test:"
 echo "  ginkgo --focus=\"test pattern\" suite/command"
