@@ -12,19 +12,6 @@
 # limitations under the License.
 
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: docker-registry-pvc
-  namespace: oras-e2e-tests
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,9 +29,40 @@ spec:
       labels:
         app: docker-registry
     spec:
+      initContainers:
+      - name: init-registry-data
+        image: oras-e2e-tests:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Extracting registry testdata..."
+          SRC_DIR="/workspace/test/e2e/testdata/distribution/mount"
+
+          # Extract all tar.gz files to create docker directory
+          for layer in $(ls -rt $SRC_DIR/*.tar.gz); do
+            echo "Extracting $layer..."
+            tar -xzf $layer -C /var/lib/registry
+          done
+
+          # Copy passwd_bcrypt
+          mkdir -p /etc/docker/registry
+          cp $SRC_DIR/passwd_bcrypt /etc/docker/registry/passwd
+
+          echo "Contents of /var/lib/registry:"
+          ls -la /var/lib/registry/
+          echo "Contents of /var/lib/registry/docker:"
+          ls -la /var/lib/registry/docker/ || echo "docker directory not found"
+          echo "Done."
+        volumeMounts:
+        - name: registry-storage
+          mountPath: /var/lib/registry
+        - name: registry-auth
+          mountPath: /etc/docker/registry
       containers:
       - name: registry
-        image: registry:2
+        image: ghcr.io/oras-project/registry:v1.0.0-rc.4
         ports:
         - containerPort: 5000
           name: http
@@ -56,25 +74,38 @@ spec:
           value: "/var/lib/registry"
         - name: REGISTRY_STORAGE_DELETE_ENABLED
           value: "true"
+        - name: REGISTRY_AUTH_HTPASSWD_REALM
+          value: "test-basic"
+        - name: REGISTRY_AUTH_HTPASSWD_PATH
+          value: "/etc/docker/registry/passwd"
         volumeMounts:
         - name: registry-storage
           mountPath: /var/lib/registry
+        - name: registry-auth
+          mountPath: /etc/docker/registry
         livenessProbe:
           httpGet:
             path: /v2/
             port: 5000
+            httpHeaders:
+            - name: Authorization
+              value: Basic aGVsbG86b3Jhcy10ZXN0
           initialDelaySeconds: 10
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /v2/
             port: 5000
+            httpHeaders:
+            - name: Authorization
+              value: Basic aGVsbG86b3Jhcy10ZXN0
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
       - name: registry-storage
-        persistentVolumeClaim:
-          claimName: docker-registry-pvc
+        emptyDir: {}
+      - name: registry-auth
+        emptyDir: {}
 
 ---
 apiVersion: v1
