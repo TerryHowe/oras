@@ -41,10 +41,13 @@ const (
 	resolveBase
 )
 
-// ResolveFlags generates resolve flags for localhost mapping.
+// ResolveFlags generates resolve flags for host mapping.
 func ResolveFlags(reg string, host string, flagType resolveType) []string {
-	Expect(reg).To(HavePrefix("localhost:"), fmt.Sprintf("%q is not in format of localhost:<port>", reg))
-	_, port, _ := strings.Cut(reg, ":")
+	// Extract host and port from registry address
+	regHost, port, found := strings.Cut(reg, ":")
+	if !found {
+		port = "5000"
+	}
 	resolveFlag := "resolve"
 	usernameFlag := "username"
 	passwordFlag := "password"
@@ -64,12 +67,17 @@ func ResolveFlags(reg string, host string, flagType resolveType) []string {
 		plainHttpFlag = "to-" + plainHttpFlag
 	}
 
-	return []string{fp + resolveFlag, fmt.Sprintf("%s:80:127.0.0.1:%s", host, port), fp + usernameFlag, Username, fp + passwordFlag, Password, fp + plainHttpFlag}
+	// For localhost, resolve to 127.0.0.1; otherwise resolve to the actual host
+	resolveIP := "127.0.0.1"
+	if !strings.HasPrefix(reg, "localhost:") && !strings.HasPrefix(reg, "localhost") {
+		resolveIP = regHost
+	}
+
+	return []string{fp + resolveFlag, fmt.Sprintf("%s:80:%s:%s", host, resolveIP, port), fp + usernameFlag, Username, fp + passwordFlag, Password, fp + plainHttpFlag}
 }
 
 var _ = Describe("1.1 registry users:", func() {
-	if strings.HasPrefix(Host, "localhost:") {
-		When("custom host is provided", func() {
+	When("custom host is provided", func() {
 			type discover struct {
 				ocispec.Descriptor
 				Referrers []ocispec.Descriptor
@@ -260,5 +268,5 @@ var _ = Describe("1.1 registry users:", func() {
 				ORAS("repo", "tags", RegistryRef(Host, repo, "")).MatchKeyWords(newTag).Exec()
 			})
 		})
-	}
+	})
 })
