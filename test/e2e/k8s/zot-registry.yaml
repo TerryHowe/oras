@@ -12,6 +12,19 @@
 # limitations under the License.
 
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zot-registry-pvc
+  namespace: oras-e2e-tests
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -79,7 +92,8 @@ spec:
           periodSeconds: 5
       volumes:
       - name: zot-data
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: zot-registry-pvc
 
 ---
 apiVersion: v1
