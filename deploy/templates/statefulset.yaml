@@ -192,6 +192,13 @@ spec:
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount-vault
             - name: certs
               mountPath: /etc/certs
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory | default "12Gi" | quote }}
+              cpu: {{ .Values.resources.requests.cpu | default "4" | quote }}
+            limits:
+              memory: {{ .Values.resources.limits.memory | default "64Gi" | quote }}
+              cpu: {{ .Values.resources.limits.cpu | default "32" | quote }}
         - name: nginx-prometheus-exporter
           image: {{ required "Property '.images.exporter' is required." $.Values.images.exporter | quote }}
           imagePullPolicy: IfNotPresent
