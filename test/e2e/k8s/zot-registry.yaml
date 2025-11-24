@@ -61,7 +61,7 @@ spec:
           mountPath: /etc/zot
       containers:
       - name: zot
-        image: ghcr.io/project-zot/zot:v2.1.1
+        image: ghcr.io/project-zot/zot:v2.1.11
         ports:
         - containerPort: 5000
           name: http
