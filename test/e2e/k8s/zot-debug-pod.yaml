@@ -1,0 +1,20 @@
+# Debug pod for inspecting zot registry PVC
+apiVersion: v1
+kind: Pod
+metadata:
+  name: zot-debug
+  namespace: oras-e2e-tests
+spec:
+  containers:
+  - name: debug
+    image: alpine:latest
+    command: ["sleep", "infinity"]
+    volumeMounts:
+    - name: zot-data
+      mountPath: /etc/zot
+      readOnly: true
+  volumes:
+  - name: zot-data
+    persistentVolumeClaim:
+      claimName: zot-registry-pvc
+      readOnly: true
