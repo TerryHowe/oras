@@ -1,6 +1,6 @@
 # NVCF Proxy Cache Release Notes
 
-#version 0.25.5
+#version 0.25.6
 https://jirasw.nvidia.com/browse/NVCF-7821
 
 #version 0.25.4
