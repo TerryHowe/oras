@@ -58,6 +58,7 @@ spec:
         - -c
         - |
           hosts=(${TARGET_HOST//,/ })
+          rm -rf /host/etc/containerd/certs.d/*
           for host in "${hosts[@]}"; do
           echo "$host"
           mkdir -p /host/etc/containerd/certs.d/$host
