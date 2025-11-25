@@ -18,6 +18,7 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,7 +44,7 @@ const (
 
 // ResolveFlags generates resolve flags for host mapping.
 func ResolveFlags(reg string, host string, flagType resolveType) []string {
-	_, port, _ := strings.Cut(reg, ":")
+	regHost, port, _ := strings.Cut(reg, ":")
 	resolveFlag := "resolve"
 	usernameFlag := "username"
 	passwordFlag := "password"
@@ -63,7 +64,13 @@ func ResolveFlags(reg string, host string, flagType resolveType) []string {
 		plainHttpFlag = "to-" + plainHttpFlag
 	}
 
-	return []string{fp + resolveFlag, fmt.Sprintf("%s:80:127.0.0.1:%s", host, port), fp + usernameFlag, Username, fp + passwordFlag, Password, fp + plainHttpFlag}
+	// Resolve the registry hostname to an IP address
+	ip := regHost
+	if addrs, err := net.LookupHost(regHost); err == nil && len(addrs) > 0 {
+		ip = addrs[0]
+	}
+
+	return []string{fp + resolveFlag, fmt.Sprintf("%s:80:%s:%s", host, ip, port), fp + usernameFlag, Username, fp + passwordFlag, Password, fp + plainHttpFlag}
 }
 
 var _ = Describe("1.1 registry users:", func() {
