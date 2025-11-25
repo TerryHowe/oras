@@ -67,8 +67,10 @@ if command -v kind &> /dev/null; then
     # Check if kind cluster exists
     if kind get clusters 2>/dev/null | grep -q .; then
         echo "Detected kind cluster(s). Loading image into kind..."
-        kind load docker-image "${FULL_IMAGE}"
-        echo "✓ Image loaded into kind cluster"
+        # Use the first available cluster or specified cluster name
+        CLUSTER_NAME="${KIND_CLUSTER_NAME:-$(kind get clusters 2>/dev/null | head -1)}"
+        kind load docker-image "${FULL_IMAGE}" --name "${CLUSTER_NAME}"
+        echo "✓ Image loaded into kind cluster: ${CLUSTER_NAME}"
     fi
 elif command -v minikube &> /dev/null; then
     # Check if minikube is running
