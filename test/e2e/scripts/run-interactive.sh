@@ -47,24 +47,50 @@ fi
 echo "Creating interactive test pod..."
 echo ""
 
-# Create the interactive pod
-# Note: We override the entrypoint to prevent automatic build/test execution
-kubectl run "$POD_NAME" \
-    --image=oras-e2e-tests:latest \
-    --image-pull-policy=IfNotPresent \
-    --restart=Never \
-    --namespace=oras-e2e-tests \
-    --env="CGO_ENABLED=1" \
-    --env="DOCKER_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000" \
-    --env="FALLBACK_REGISTRY_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000" \
-    --env="ZOT_REGISTRY_HOST=zot-registry.oras-e2e-tests.svc.cluster.local:5000" \
-    --env="ORAS_REGISTRY_HOST=docker-registry.oras-e2e-tests.svc.cluster.local:5000" \
-    --env="ORAS_REGISTRY_FALLBACK_HOST=fallback-registry.oras-e2e-tests.svc.cluster.local:5000" \
-    --env="ORAS_PATH=/workspace/bin/linux/amd64/oras" \
-    --env="PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin:/workspace/bin/linux/amd64" \
-    --env="ORAS_E2E_PLAIN_HTTP=true" \
-    --env="ORAS_E2E_TIMEOUT=10m" \
-    --command -- /bin/sh -c "sleep infinity"
+# Create the interactive pod with volume mount
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $POD_NAME
+  namespace: oras-e2e-tests
+spec:
+  restartPolicy: Never
+  containers:
+  - name: interactive
+    image: oras-e2e-tests:latest
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/sh", "-c", "sleep infinity"]
+    env:
+    - name: CGO_ENABLED
+      value: "1"
+    - name: DOCKER_REGISTRY_HOST
+      value: "docker-registry.oras-e2e-tests.svc.cluster.local:5000"
+    - name: FALLBACK_REGISTRY_HOST
+      value: "fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
+    - name: ZOT_REGISTRY_HOST
+      value: "zot-registry.oras-e2e-tests.svc.cluster.local:5000"
+    - name: ORAS_REGISTRY_HOST
+      value: "docker-registry.oras-e2e-tests.svc.cluster.local:5000"
+    - name: ORAS_REGISTRY_FALLBACK_HOST
+      value: "fallback-registry.oras-e2e-tests.svc.cluster.local:5000"
+    - name: ORAS_PATH
+      value: "/workspace/bin/linux/amd64/oras"
+    - name: PATH
+      value: "/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin:/workspace/bin/linux/amd64"
+    - name: ORAS_E2E_PLAIN_HTTP
+      value: "true"
+    - name: ORAS_E2E_TIMEOUT
+      value: "10m"
+    volumeMounts:
+    - name: zot-data
+      mountPath: /zot-data
+  volumes:
+  - name: zot-data
+    hostPath:
+      path: /tmp/oras-e2e-zot-data
+      type: Directory
+EOF
 
 # Wait for pod to be ready
 echo "Waiting for pod to be ready..."
@@ -81,6 +107,9 @@ echo "  ORAS_REGISTRY_FALLBACK_HOST=fallback-registry.oras-e2e-tests.svc.cluster
 echo "  ZOT_REGISTRY_HOST=zot-registry.oras-e2e-tests.svc.cluster.local:5000"
 echo "  ORAS_E2E_PLAIN_HTTP=true"
 echo ""
+echo "Volume mounts:"
+echo "  /zot-data -> zot registry storage (read-write)"
+echo ""
 echo "Working directory: /workspace/test/e2e"
 echo ""
 echo "To build oras and run tests automatically:"
@@ -96,6 +125,10 @@ echo "  oras blob push --plain-http zot-registry.oras-e2e-tests.svc.cluster.loca
 echo ""
 echo "To run a specific test:"
 echo "  ginkgo --focus=\"test pattern\" suite/command"
+echo ""
+echo "To inspect zot registry data:"
+echo "  ls -la /zot-data"
+echo "  find /zot-data -type f"
 echo ""
 echo "To exit the shell, type 'exit' or press Ctrl+D"
 echo ""
