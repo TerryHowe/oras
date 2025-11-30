@@ -1,5 +1,8 @@
 # NVCF Proxy Cache Release Notes
 
+#version 0.25.7
+https://nvbugspro.nvidia.com/bug/5693476
+
 #version 0.25.6
 https://jirasw.nvidia.com/browse/NVCF-7821
 
