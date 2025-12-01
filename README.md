@@ -309,15 +309,29 @@ metrics:
   throughputHistogramBuckets: "25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000"
 ```
 
-#### OpenTelemetry Tracing
+#### Disable Monitoring
+
+For environments where monitoring is not required or to reduce resource usage:
 
 ```yaml
 # values.yaml
-traces:
-  enabled: true
-  collector:
-    endpoint: "otel-collector.monitoring.svc.cluster.local:4317"
+monitoring:
+  enabled: false
 ```
+
+**What gets disabled:**
+- PodMonitor resources (Prometheus scraping configuration)
+- Nginx Prometheus exporter sidecar container
+- Metrics endpoint exposure
+- Prometheus service discovery integration
+
+**Benefits of disabling monitoring:**
+- Reduced memory usage (eliminates nginx-prometheus-exporter sidecar)
+- Lower CPU overhead (no metrics collection and processing)
+- Simplified deployment (fewer Kubernetes resources)
+- Reduced network traffic (no metrics scraping)
+
+**Note:** Cache functionality remains fully operational when monitoring is disabled. Only observability and metrics collection are affected.
 
 ### Feature-Specific Configuration
 
@@ -367,9 +381,6 @@ service:
   port: 14128
 
 monitoring:
-  enabled: true
-
-traces:
   enabled: true
 ```
 
@@ -458,11 +469,6 @@ service:
 metrics:
   cacheMetricsStorageSize: "1g"
   throughputHistogramBuckets: "50000000, 75000000, 100000000, 150000000, 200000000"
-
-traces:
-  enabled: true
-  collector:
-    endpoint: "jaeger-collector.observability.svc.cluster.local:14250"
 
 nucleus:
   enabled: true
@@ -563,6 +569,9 @@ kubectl logs -n container-caching nvcf-container-cache-0 -c server | grep ERROR
 
 # Check cache statistics
 kubectl exec -n container-caching nvcf-container-cache-0 -- wget -qO- http://localhost:13128/stub_status
+
+# For performance optimization, consider disabling monitoring
+# See "Disable Monitoring" section for configuration details
 ```
 
 ## Uninstallation
