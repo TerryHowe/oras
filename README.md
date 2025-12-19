@@ -1,358 +1,613 @@
-# NVCF Container Cache
+# NVCF Container Cache - Comprehensive Configuration and Deployment Guide
 
-A comprehensive container caching solution optimized for NGC, S3, HuggingFace, and other container registries. This solution enhances Docker image pull efficiency by caching images locally, reducing network bandwidth and improving pull times.
+**Version:** 0.25.9  
+**Application Version:** 1.2.1  
+**Chart Name:** nvcf-container-cache
+
+## Table of Contents
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Configuration Reference](#configuration-reference)
+- [Deployment Guide](#deployment-guide)
+- [Testing Guide](#testing-guide)
+- [Environment-Specific Examples](#environment-specific-examples)
+- [Troubleshooting](#troubleshooting)
+- [Advanced Configuration](#advanced-configuration)
+
+---
 
 ## Overview
 
-The NVCF Container Cache acts as a transparent caching proxy for container registries, providing:
-- **Container Image Caching**: Local caching of container images from NGC and other registries
-- **Multi-Protocol Support**: Caching for S3, NGC, HuggingFace, and standard container registries
-- **High Performance**: Optimized nginx-based proxy with intelligent buffering and caching strategies
-- **Security**: Optional Vault integration for certificate management and authentication
-- **Scalability**: Support for both persistent and ephemeral storage configurations
+The NVCF Container Cache is a high-performance caching proxy optimized for container registries, particularly NGC (NVIDIA GPU Cloud). It acts as a transparent proxy that caches container images, layers, and metadata to reduce bandwidth usage and improve image pull times across Kubernetes clusters.
+
+### Key Features
+- **Container Registry Caching**: Supports NGC, Docker Hub, GCR, ECR, and other OCI-compliant registries
+- **Multi-Protocol Support**: Container images, S3 objects, HuggingFace models, and NGC assets
+- **High Performance**: Nginx-based proxy with intelligent caching and buffering
+- **Security**: Vault integration for certificate management or self-signed certificates
+- **Scalability**: Multi-replica deployment with persistent or ephemeral storage
+- **Observability**: Prometheus metrics and detailed logging
+
+---
 
 ## Prerequisites
 
-1. **Container Image Access**: Access to the container cache image at `nvcr.io/nvstaging/clara/nvcf-container-caching`
-2. **Kubernetes Cluster**: Running Kubernetes with containerd runtime
-3. **NGC API Key**: Valid NGC API key for image pull access
-4. **Storage**: Either persistent volumes or sufficient node storage for caching
+1. **Kubernetes Cluster**: 1.19+ with containerd runtime
+2. **Container Image Access**: Access to the public NVCF container cache images from [NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nvcf-byoc/helm-charts/nvcf-container-cache)
+3. **NGC API Key**: Valid NGC API key for accessing NVIDIA container images
+4. **Storage**: Persistent volumes or sufficient node storage for caching
+5. **Network**: Outbound HTTPS access to container registries
+6. **Tools**: kubectl, helm 3.x
 
-## Quick Start
+---
 
-### 1. Create Namespace and Pull Secret
+## Configuration Reference
 
-```bash
-# Create dedicated namespace
-kubectl create namespace container-caching
+All configuration is managed through the Helm chart's `values.yaml` file. Below is the complete reference of all configurable options.
 
-# Create NGC pull secret
-kubectl create secret docker-registry ngc-container-pull \
-  --docker-server=nvcr.io \
-  --docker-username='$oauthtoken' \
-  --docker-password=<your-ngc-key> \
-  -n container-caching
+### Core Configuration
+
+#### Node Selection and Replicas
+
+```yaml
+# Node selection for cache pods
+nodeSelector:
+  nodeGroup: monitoring                           # Target specific node groups
+  node.kubernetes.io/instance-type: "m5.xlarge"  # Specific instance types
+  topology.kubernetes.io/zone: "us-west-2a"      # Specific availability zones
+  cache-enabled: "true"                          # Custom node labels
+
+# Number of cache replicas (default: 1)
+replicaCount: 3
 ```
 
-### 2. Basic Installation (Without Vault, With Persistent Storage)
+**Options:**
+- `nodeSelector`: Kubernetes node selector labels to target specific nodes
+- `replicaCount`: Number of cache replicas (1-10, typically 3-5 for production)
 
-```bash
-# Clone and navigate to chart directory
-cd deploy/
+#### Target Registries
 
-# Install with default configuration
-helm install nvcf-container-cache . \
-  --namespace container-caching \
-  --set vault.enabled=false
+```yaml
+# Target registries for container caching (default: nvcr.io)
+targetHost: "nvcr.io"                    # Single registry
+targetHost: "nvcr.io,gcr.io,docker.io"  # Multiple registries
+targetHost: "stg.nvcr.io,nvcr.io"       # Staging and production
 ```
 
-### 3. Verify Installation
+**Options:**
+- Single or comma-separated list of container registries
+- Common values: `nvcr.io`, `stg.nvcr.io`, `gcr.io`, `docker.io`, `registry-1.docker.io`
 
-```bash
-kubectl --namespace=container-caching get pod,daemonset,svc,statefulset,pvc \
-  --selector='app.kubernetes.io/name=nvcf-container-cache'
+### Container Images
+
+```yaml
+images:
+  # Main cache server image
+  server: nvcr.io/nvidia/nvcf-byoc/nvcf-container-cache:latest
+  
+  # Prometheus metrics exporter
+  exporter: nvcr.io/nvidia/nvcf-byoc/nginx-prometheus-exporter:latest
+  
+  # TLS certificate bundle
+  certificates: nvcr.io/nvidia/nvcf-byoc/nvcf-proxy-tls-certs:latest
+  
+  # Pull secrets for image access
+  secrets:
+    - nvidia-ngcuser-pull-secret     # NGC pull secret
+    - additional-pull-secret         # Additional secrets if needed
 ```
 
-## Configuration Guide
+### Cache Configuration
+
+```yaml
+cache:
+  # Cache key storage size (default: 10m)
+  keyStorageSize: "50m"      # Options: 10m, 50m, 100m, 500m
+  
+  # Maximum cache size (default: 80g)
+  maxSize: "500g"            # Options: 100g, 500g, 1000g, 5000g
+  
+  # Inactive period before removal (default: 60d)
+  inactive: "7d"             # Options: 1d, 7d, 30d, 60d
+  
+  # Cache validity period (default: 24h)
+  valid: "12h"               # Options: 4h, 12h, 24h, 7d
+  
+  # HTTP/2 support (default: off)
+  http2: "on"                # Options: on, off
+  
+  # Worker connections (default: 1000)
+  workerConnection: 2000     # Options: 1000, 2000, 4000, 8000
+```
+
+**Cache Size Guidelines:**
+- **Development**: keyStorageSize: 10m, maxSize: 100g
+- **Staging**: keyStorageSize: 50m, maxSize: 500g  
+- **Production**: keyStorageSize: 200m, maxSize: 2000g+
 
 ### Storage Configuration
 
-#### Option 1: Persistent Volume Storage (Recommended for Production)
+#### Persistent Volume Claims
 
 ```yaml
-# values.yaml
 persistentVolumeClaim:
-  # Storage class for persistent volumes
-  storageClassName: "your-storage-class"  # e.g., "azurefile", "gp2", "standard"
+  # Storage class name
+  storageClassName: "gp2"           # AWS: gp2, gp3
+  storageClassName: "azurefile"     # Azure: azurefile, premium-ssd
+  storageClassName: "standard"      # GCP: standard, ssd-retain
+  storageClassName: "emptydir"      # EmptyDir (ephemeral, for testing)
   
-  # Size for container image cache
-  sizeGB: 100
+  # Container cache volume size (default: 100)
+  sizeGB: 500                       # Size in GB for container images
   
-  # Size for proxy cache (S3/NGC/HF)
-  sizeProxyGB: 200
+  # Proxy cache volume size (default: 200)  
+  sizeProxyGB: 1000                 # Size in GB for S3/NGC/HF caching
   
-  # Minimum free space percentage to maintain
-  freeProxyPct: 7
+  # Minimum free space percentage (default: 7)
+  freeProxyPct: 10                  # Cleanup when reaching 90% full
 ```
 
-**Example for Different Cloud Providers:**
+**Storage Class Examples:**
+
+| Cloud Provider | Storage Class | Type | Performance |
+|----------------|---------------|------|-------------|
+| AWS | `gp2` | General Purpose SSD | Standard |
+| AWS | `gp3` | General Purpose SSD | Enhanced |
+| AWS | `io1` | Provisioned IOPS | High Performance |
+| Azure | `azurefile` | File Storage | Standard |
+| Azure | `premium-ssd` | Premium SSD | High Performance |
+| GCP | `standard` | Persistent Disk | Standard |
+| GCP | `ssd-retain` | SSD | High Performance |
+| Any | `emptydir` | EmptyDir | Ephemeral (testing only) |
+
+### Service Configuration
 
 ```yaml
-# Azure
-persistentVolumeClaim:
-  storageClassName: "azurefile"
-  sizeGB: 500
-  sizeProxyGB: 1000
-
-# AWS
-persistentVolumeClaim:
-  storageClassName: "gp2"
-  sizeGB: 500
-  sizeProxyGB: 1000
-
-# GCP
-persistentVolumeClaim:
-  storageClassName: "standard"
-  sizeGB: 500
-  sizeProxyGB: 1000
+service:
+  # Service type (default: ClusterIP)
+  type: ClusterIP              # Internal cluster access only
+  type: NodePort               # External access via node ports
+  type: LoadBalancer           # Cloud provider load balancer
+  
+  # Service port (default: 14128)
+  port: 14128                  # ClusterIP/LoadBalancer port
+  port: 30345                  # NodePort (30000-32767 range)
 ```
 
-#### Option 2: EmptyDir Storage (For Testing/Development)
+**Service Type Guidelines:**
+- **ClusterIP**: Internal cluster access (most common)
+- **NodePort**: Direct node access for testing
+- **LoadBalancer**: Production external access
+
+### Resource Configuration
 
 ```yaml
-# values.yaml
-persistentVolumeClaim:
-  storageClassName: "emptydir"
-  sizeGB: 50
-  sizeProxyGB: 100
+resources:
+  requests:
+    memory: "8Gi"              # Minimum memory
+    cpu: "2"                   # Minimum CPU cores
+  limits:
+    memory: "32Gi"             # Maximum memory
+    cpu: "16"                  # Maximum CPU cores
 ```
 
-**⚠️ Note**: EmptyDir storage is ephemeral and will be lost when pods restart.
+**Resource Sizing Guidelines:**
+
+| Environment | Memory Request | Memory Limit | CPU Request | CPU Limit |
+|-------------|----------------|--------------|-------------|-----------|
+| Development | 4Gi | 8Gi | 1 | 4 |
+| Staging | 8Gi | 32Gi | 2 | 16 |
+| Production | 16Gi | 64Gi | 4 | 32 |
+| High-Performance | 32Gi | 128Gi | 8 | 64 |
 
 ### Vault Integration
 
-#### Option 1: With Vault (Recommended for Production)
+#### Enable Vault (Production)
 
 ```yaml
-# values.yaml
 vault:
   enabled: true
-  namespace: "nvcf"
+  namespace: "nvcf"                    # Vault namespace
   
-  # Cluster configuration
-  clusterCSP: "azure"  # or "gcp", "aws", "dgxc"
-  clusterRegion: "eastus"
-  clusterAccountName: "your-account"
-  clusterName: "your-cluster-name"
+  # Cluster identification
+  clusterCSP: "azure"                  # Cloud provider: azure, gcp, aws, dgxc
+  clusterRegion: "eastus"              # Region identifier
+  clusterAccountName: "prod-account"   # Account/subscription name
+  clusterName: "prod-cluster-east"     # Cluster identifier
   
-  # Vault server configuration
-  vaultAddress: "https://vault.your-domain.com"
-  certLocation: "http://crls.your-domain.com/ca/pem"
+  # Vault server details
+  vaultAddress: "https://vault.nvidia.com"                    # Production
+  vaultAddress: "https://stg.vault.nvidia.com:443"           # Staging
+  certLocation: "http://crls.vpki.nvidia.com/ca/pem"         # Certificate location
 ```
 
-**Example Configurations by Environment:**
+#### Disable Vault (Self-Signed Certificates)
 
 ```yaml
-# Production
-vault:
-  enabled: true
-  namespace: "nvcf"
-  clusterCSP: "azure"
-  clusterRegion: "eastus"
-  clusterAccountName: "prod-account"
-  clusterName: "prod-cluster"
-  vaultAddress: "https://vault.nvidia.com"
-
-# Staging
-vault:
-  enabled: true
-  namespace: "nvcf"
-  clusterCSP: "azure"
-  clusterRegion: "eastus"
-  clusterAccountName: "stage-account"
-  clusterName: "stage-cluster"
-  vaultAddress: "https://stg.vault.nvidia.com:443"
-```
-
-#### Option 2: Without Vault (Self-Signed Certificates)
-
-```yaml
-# values.yaml
 vault:
   enabled: false
 ```
 
 When Vault is disabled, the system automatically generates self-signed certificates for TLS communication.
 
-### Node Selection and Scheduling
-
-#### Node Selector Configuration
-
-```yaml
-# values.yaml
-nodeSelector:
-  # Target specific node groups
-  nodeGroup: "monitoring"
-  
-  # Target nodes with specific instance types
-  node.kubernetes.io/instance-type: "m5.xlarge"
-  
-  # Target nodes in specific zones
-  topology.kubernetes.io/zone: "us-west-2a"
-  
-  # Custom labels
-  cache-enabled: "true"
-```
-
-#### Multi-Node Deployment with Replica Configuration
-
-```yaml
-# values.yaml
-replicaCount: 3  # Number of cache replicas
-
-# Advanced affinity rules for better distribution
-# Note: The chart includes anti-affinity by default to spread replicas across nodes
-```
-
-### Cache Configuration
-
-#### Basic Cache Settings
-
-```yaml
-# values.yaml
-cache:
-  # Cache key storage size
-  keyStorageSize: "50m"  # 10m, 50m, 100m
-  
-  # Maximum cache size
-  maxSize: "500g"  # 80g, 500g, 1000g
-  
-  # Inactive period (how long items stay in cache without access)
-  inactive: "7d"  # 1d, 7d, 30d
-  
-  # Cache validity period
-  valid: "24h"  # 4h, 24h, 7d
-  
-  # HTTP/2 support
-  http2: "on"  # on/off
-  
-  # Worker connections
-  workerConnection: 2000  # 1000, 2000, 4000
-```
-
-#### Advanced Cache Tuning
-
-```yaml
-# values.yaml
-cache:
-  # For high-traffic environments
-  keyStorageSize: "200m"
-  maxSize: "2000g"
-  workerConnection: 4000
-  
-  # For development environments
-  keyStorageSize: "10m"
-  maxSize: "100g"
-  workerConnection: 1000
-```
-
-### Network and Service Configuration
-
-#### Service Type Options
-
-```yaml
-# values.yaml
-service:
-  # ClusterIP (internal access only)
-  type: ClusterIP
-  port: 14128
-  
-  # NodePort (external access via node ports)
-  type: NodePort
-  port: 30345
-  
-  # LoadBalancer (cloud provider load balancer)
-  type: LoadBalancer
-  port: 14128
-```
-
-#### Target Host Configuration
-
-```yaml
-# values.yaml
-# Single target
-targetHost: "nvcr.io"
-
-# Multiple targets
-targetHost: "nvcr.io,gcr.io,docker.io"
-
-# Environment-specific targets
-targetHost: "stg.nvcr.io,nvcr.io"
-```
-
-### Container Configuration
-
-#### Image Configuration
-
-```yaml
-# values.yaml
-images:
-  # Main cache server
-  server: "nvcr.io/nv-ngc-devops/nvcf-container-cache:v1.1.32"
-  
-  # Prometheus exporter
-  exporter: "nvcr.io/nv-ngc-devops/nginx-prometheus-exporter:1.0"
-  
-  # Certificate management
-  certificates: "nvcr.io/nv-ngc-devops/nvcf-proxy-tls-certs:1.2.1"
-  
-  # Pull secrets
-  secrets:
-    - "ngc-container-pull"
-    - "additional-pull-secret"
-```
-
-### Monitoring and Metrics
+### Metrics and Monitoring
 
 #### Enable Monitoring
 
 ```yaml
-# values.yaml
 monitoring:
-  enabled: true
+  enabled: true                # Enable PodMonitor for Prometheus
 
 metrics:
-  # Metrics storage size
+  # Metrics storage size (default: 10m)
   cacheMetricsStorageSize: "300m"
   
-  # Throughput histogram buckets (bytes/sec)
+  # Throughput histogram buckets for performance monitoring (bytes/sec)
   throughputHistogramBuckets: "25000000, 30000000, 35000000, 40000000, 50000000, 60000000, 80000000, 100000000"
 ```
 
-#### Disable Monitoring
-
-For environments where monitoring is not required or to reduce resource usage:
+#### Disable Monitoring (Resource Optimization)
 
 ```yaml
-# values.yaml
 monitoring:
   enabled: false
 ```
 
-**What gets disabled:**
-- PodMonitor resources (Prometheus scraping configuration)
-- Nginx Prometheus exporter sidecar container
-- Metrics endpoint exposure
-- Prometheus service discovery integration
-
-**Benefits of disabling monitoring:**
-- Reduced memory usage (eliminates nginx-prometheus-exporter sidecar)
-- Lower CPU overhead (no metrics collection and processing)
+**Benefits of Disabling Monitoring:**
+- Reduces memory usage (eliminates nginx-prometheus-exporter sidecar)
+- Lower CPU overhead (no metrics collection)
 - Simplified deployment (fewer Kubernetes resources)
 - Reduced network traffic (no metrics scraping)
 
-**Note:** Cache functionality remains fully operational when monitoring is disabled. Only observability and metrics collection are affected.
-
-### Feature-Specific Configuration
+### Advanced Features
 
 #### Nucleus Integration
 
 ```yaml
-# values.yaml
 nucleus:
-  enabled: true  # Enable for NVCF nucleus integration
+  enabled: true               # Enable for NVCF nucleus integration
+  enabled: false              # Disable if not using unbound-dns
 ```
 
-## Installation Examples
+#### Tracing (OpenTelemetry)
 
-### Example 1: Production with Vault and Persistent Storage
+```yaml
+traces:
+  enabled: false              # Enable distributed tracing
+  collector:
+    endpoint: "prod.otel.kaizen.nvidia.com:8282"
+```
+
+#### Custom Pod Configuration
+
+```yaml
+# Custom pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9113"
+
+# Custom pod labels  
+podLabels:
+  environment: "production"
+  team: "infrastructure"
+```
+
+---
+
+## Deployment Guide
+
+### 1. Prepare Environment
+
+#### Create Namespace and Pull Secret
+
+```bash
+# Create dedicated namespace
+kubectl create namespace container-caching
+
+# Create NGC pull secret (replace <your-ngc-key> with your actual API key)
+kubectl create secret docker-registry nvidia-ngcuser-pull-secret \
+  --docker-server=nvcr.io \
+  --docker-username='$oauthtoken' \
+  --docker-password=<your-ngc-key> \
+  -n container-caching
+```
+
+#### Verify Prerequisites
+
+```bash
+# Check cluster access
+kubectl cluster-info
+
+# Check storage classes
+kubectl get storageclass
+
+# Verify namespace
+kubectl get namespace container-caching
+```
+
+### 2. Configure Values File
+
+Create a custom values file based on your environment:
+
+```bash
+# Copy example values file
+cp deploy/values-gcp-ct1.yaml my-values.yaml
+
+# Edit configuration
+vim my-values.yaml
+```
+
+### 3. Deploy with Helm
+
+#### Basic Deployment
+
+```bash
+# Navigate to chart directory
+cd /path/to/nvcf-container-cache/deploy
+
+# Install with default values
+helm install nvcf-container-cache . \
+  --namespace container-caching \
+  --set vault.enabled=false
+```
+
+#### Production Deployment
+
+```bash
+# Install with custom values file
+helm install nvcf-container-cache . \
+  --namespace container-caching \
+  --values my-values.yaml \
+  --timeout 10m
+```
+
+#### Upgrade Existing Deployment
+
+```bash
+# Upgrade with new configuration
+helm upgrade nvcf-container-cache . \
+  --namespace container-caching \
+  --values my-values.yaml \
+  --timeout 10m
+
+# Check upgrade status
+helm status nvcf-container-cache -n container-caching
+```
+
+### 4. Verify Deployment
+
+```bash
+# Check all resources
+kubectl -n container-caching get pods,svc,pvc,statefulset,daemonset
+
+# Check pod status
+kubectl -n container-caching get pods -l app.kubernetes.io/name=nvcf-container-cache
+
+# Check logs
+kubectl -n container-caching logs nvcf-container-cache-0 -c nginx-proxy
+```
+
+Expected output:
+```
+NAME                       READY   STATUS    RESTARTS   AGE
+nvcf-container-cache-0     3/3     Running   0          2m
+nvcf-container-cache-1     3/3     Running   0          2m
+nvcf-container-cache-2     3/3     Running   0          2m
+```
+
+### 5. Configure Node Containerd
+
+The deployment includes a DaemonSet that automatically configures containerd on each node to use the cache. Verify it's working:
+
+```bash
+# Check DaemonSet status
+kubectl -n container-caching get daemonset
+
+# Check DaemonSet logs
+kubectl -n container-caching logs daemonset/nvcf-container-cache-cc
+
+# Verify containerd configuration on nodes
+kubectl -n container-caching exec ds/nvcf-container-cache-cc -- \
+  cat /host/etc/containerd/config.toml | grep -A5 "registry.mirrors"
+```
+
+---
+
+## Testing Guide
+
+The NVCF Container Cache includes a comprehensive testing framework to validate functionality and performance.
+
+### 1. Automated Test Suite
+
+#### Quick Test
+
+```bash
+# Navigate to test directory
+cd /path/to/nvcf-cache/tests/container-cache
+
+# Set kubeconfig for your cluster
+export KUBECONFIG=/path/to/your/kubeconfig
+
+# Run automated test
+./container-cache-test.sh
+```
+
+#### Test Commands
+
+| Command | Description |
+|---------|-------------|
+| `./container-cache-test.sh` | Run full automated test suite |
+| `./container-cache-test.sh --status` | Check cache pod status and recent activity |
+| `./container-cache-test.sh --logs` | Stream cache logs (filtered for container traffic) |
+| `./container-cache-test.sh --hits` | Show recent cache HITs/MISSes |
+| `./container-cache-test.sh --cleanup` | Clean up test resources |
+
+#### Expected Test Output
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║       NVCF Container Cache Test Suite for QA                 ║
+╚══════════════════════════════════════════════════════════════╝
+
+▶ Checking prerequisites...
+✅ kubectl found
+✅ Cluster access confirmed  
+✅ Namespace 'container-caching' exists
+✅ Found 3 running container cache pod(s)
+
+✅ Found docker config at /docker-config/config.json
+✅ Found registry credentials
+✅ Token exchange working for stg.nvcr.io
+
+════════════════════════════════════════════════════════════
+  Testing Registry: stg.nvcr.io
+════════════════════════════════════════════════════════════
+
+═══ Test: Cache Proxy for stg.nvcr.io ═══
+  Using Bearer token authentication
+✅ Cache proxy working for stg.nvcr.io
+
+═══ Test: Manifest Fetch via Cache ═══
+📦 First manifest request (expecting MISS)...
+  HTTP Status: 200
+  ✅ First request successful (HTTP 200)
+
+📦 Second manifest request...
+  HTTP Status: 200  
+  ✅ Second request completed (HTTP 200)
+
+Tests Passed: 8
+Tests Failed: 0
+✅ All container cache API tests PASSED
+```
+
+### 2. Manual Testing
+
+#### Test Cache Hit/Miss Behavior
+
+**Terminal 1:** Watch cache logs for all pods
+```bash
+# Stream logs showing cache status
+./container-cache-test.sh --logs
+
+# Or manually:
+kubectl -n container-caching logs -l app=nvcf-proxy-cache -c nginx-proxy -f \
+  --max-log-requests=10 | grep -E '"upstream_cache_status":"(HIT|MISS)"'
+```
+
+**Terminal 2:** Pull a test image
+```bash
+# Pull an image through the cache
+docker pull stg.nvcr.io/nvidia/cuda:11.8-base-ubuntu22.04
+```
+
+**Expected Log Output:**
+```json
+# First pull - MISS (fetching from upstream)
+{"upstream_cache_status":"MISS", "request_uri":"/v2/nvidia/cuda/blobs/sha256:abc123..."}
+
+# Second pull - HIT (served from cache)
+{"upstream_cache_status":"HIT", "request_uri":"/v2/nvidia/cuda/blobs/sha256:abc123..."}
+```
+
+#### Performance Testing
+
+```bash
+# Test first pull (cache MISS)
+time docker pull stg.nvcr.io/nvidia/cuda:11.8-base-ubuntu22.04
+
+# Remove local image
+docker rmi stg.nvcr.io/nvidia/cuda:11.8-base-ubuntu22.04
+
+# Test second pull (cache HIT - should be faster)
+time docker pull stg.nvcr.io/nvidia/cuda:11.8-base-ubuntu22.04
+```
+
+#### Check Cache Statistics
+
+```bash
+# View cache statistics
+kubectl -n container-caching exec nvcf-container-cache-0 -c nginx-proxy -- \
+  wget -qO- http://localhost:13128/stub_status
+
+# Check storage usage
+kubectl -n container-caching exec nvcf-container-cache-0 -- \
+  df -h /container_cache /proxy_cache
+
+# View recent cache activity
+./container-cache-test.sh --hits
+```
+
+### 3. Validation Checklist
+
+✅ **Pod Status**: All cache pods running and ready  
+✅ **Service Connectivity**: Cache service accessible from cluster  
+✅ **DaemonSet Config**: Containerd configured on all nodes  
+✅ **Registry Connectivity**: Can reach target registries through cache  
+✅ **Authentication**: NGC OAuth token exchange working  
+✅ **Cache Behavior**: Observing HIT/MISS patterns in logs  
+✅ **Performance**: Improved pull times for cached images  
+✅ **Storage**: PVCs bound and storage available  
+
+---
+
+## Environment-Specific Examples
+
+### Development Environment
+
+```yaml
+# development-values.yaml
+replicaCount: 1
+
+nodeSelector:
+  nodeGroup: dev
+
+vault:
+  enabled: false
+
+persistentVolumeClaim:
+  storageClassName: "emptydir"
+  sizeGB: 50
+  sizeProxyGB: 100
+
+cache:
+  keyStorageSize: "10m" 
+  maxSize: "100g"
+  inactive: "1d"
+  valid: "4h"
+  workerConnection: 1000
+
+resources:
+  requests:
+    memory: "4Gi"
+    cpu: "1"
+  limits:
+    memory: "8Gi" 
+    cpu: "4"
+
+monitoring:
+  enabled: false
+
+service:
+  type: NodePort
+  port: 30345
+```
+
+Deploy:
+```bash
+helm install nvcf-container-cache-dev deploy/ \
+  --namespace container-caching \
+  --values development-values.yaml
+```
+
+### Production Environment
 
 ```yaml
 # production-values.yaml
 replicaCount: 3
 
 nodeSelector:
-  nodeGroup: "cache"
+  nodeGroup: cache
   node.kubernetes.io/instance-type: "m5.2xlarge"
 
 vault:
@@ -368,13 +623,23 @@ persistentVolumeClaim:
   storageClassName: "premium-ssd"
   sizeGB: 1000
   sizeProxyGB: 2000
+  freeProxyPct: 10
 
 cache:
   keyStorageSize: "200m"
   maxSize: "2000g"
   inactive: "30d"
   valid: "7d"
+  http2: "on"
   workerConnection: 4000
+
+resources:
+  requests:
+    memory: "16Gi"
+    cpu: "4"
+  limits:
+    memory: "64Gi"
+    cpu: "32"
 
 service:
   type: LoadBalancer
@@ -382,53 +647,23 @@ service:
 
 monitoring:
   enabled: true
+
+metrics:
+  cacheMetricsStorageSize: "1g"
+  throughputHistogramBuckets: "50000000, 75000000, 100000000, 150000000, 200000000"
+
+nucleus:
+  enabled: true
 ```
 
+Deploy:
 ```bash
 helm install nvcf-container-cache deploy/ \
   --namespace container-caching \
   --values production-values.yaml
 ```
 
-### Example 2: Development without Vault, EmptyDir Storage
-
-```yaml
-# development-values.yaml
-replicaCount: 1
-
-nodeSelector:
-  nodeGroup: "dev"
-
-vault:
-  enabled: false
-
-persistentVolumeClaim:
-  storageClassName: "emptydir"
-  sizeGB: 50
-  sizeProxyGB: 100
-
-cache:
-  keyStorageSize: "10m"
-  maxSize: "100g"
-  inactive: "1d"
-  valid: "4h"
-  workerConnection: 1000
-
-service:
-  type: NodePort
-  port: 30345
-
-monitoring:
-  enabled: false
-```
-
-```bash
-helm install nvcf-container-cache-dev deploy/ \
-  --namespace container-caching \
-  --values development-values.yaml
-```
-
-### Example 3: High-Performance Multi-Cloud Setup
+### Multi-Cloud High-Performance
 
 ```yaml
 # multi-cloud-values.yaml
@@ -462,6 +697,14 @@ cache:
 
 targetHost: "nvcr.io,gcr.io,us-docker.pkg.dev"
 
+resources:
+  requests:
+    memory: "32Gi"
+    cpu: "8"
+  limits:
+    memory: "128Gi"
+    cpu: "64"
+
 service:
   type: LoadBalancer
   port: 14128
@@ -477,112 +720,308 @@ monitoring:
   enabled: true
 ```
 
-```bash
-helm install nvcf-container-cache-hpc deploy/ \
-  --namespace container-caching \
-  --values multi-cloud-values.yaml
-```
-
-## Post-Installation Configuration
-
-### 1. Verify DaemonSet Deployment
-
-The installation includes a DaemonSet that configures containerd on each node:
-
-```bash
-# Check DaemonSet status
-kubectl get daemonset -n container-caching
-
-# Check configuration on nodes
-kubectl logs -n container-caching daemonset/nvcf-container-cache-cc
-```
-
-### 2. Test Cache Functionality
-
-```bash
-# Test with a sample image pull
-docker pull your-cache-service:30345/nvidia/cuda:11.8-base-ubuntu22.04
-
-# Check cache metrics
-kubectl port-forward -n container-caching svc/nvcf-container-cache 9113:9113
-curl http://localhost:9113/metrics | grep container_cache
-```
-
-### 3. Monitor Performance
-
-```bash
-# Check cache hit ratio
-kubectl logs -n container-caching statefulset/nvcf-container-cache | grep "cache.*HIT"
-
-# Monitor storage usage
-kubectl exec -n container-caching nvcf-container-cache-0 -- df -h /container_cache /proxy_cache
-```
+---
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues and Solutions
 
-#### 1. Storage Issues
+#### 1. Pods Not Starting
 
+**Symptoms:**
+- Pods stuck in `Pending` or `ContainerCreating`
+- PVCs not binding
+
+**Diagnosis:**
 ```bash
+# Check pod status
+kubectl -n container-caching describe pod nvcf-container-cache-0
+
 # Check PVC status
-kubectl get pvc -n container-caching
+kubectl -n container-caching get pvc
 
-# Check storage class availability
+# Check storage class
 kubectl get storageclass
-
-# For EmptyDir issues, check node disk space
-kubectl describe nodes | grep -A5 -B5 "disk pressure"
 ```
 
-#### 2. Vault Connection Issues
+**Solutions:**
+- Verify storage class exists and is available
+- Check node resources and scheduling constraints
+- Verify pull secrets are correct
+- Check for insufficient node resources
 
+#### 2. Cache Not Working
+
+**Symptoms:**
+- All requests show MISS in logs
+- No performance improvement
+
+**Diagnosis:**
 ```bash
-# Check vault configuration
-kubectl get configmap -n container-caching nvcf-container-cache-vault-config -o yaml
+# Check cache configuration
+kubectl -n container-caching logs nvcf-container-cache-0 -c nginx-proxy | grep -i cache
 
-# Check service account tokens
-kubectl describe serviceaccount -n container-caching
-
-# Test vault connectivity
-kubectl exec -n container-caching nvcf-container-cache-0 -- curl -k https://vault.nvidia.com/v1/sys/health
+# Check containerd configuration
+kubectl -n container-caching exec ds/nvcf-container-cache-cc -- \
+  cat /host/etc/containerd/config.toml
 ```
 
-#### 3. DaemonSet Configuration Issues
+**Solutions:**
+- Verify DaemonSet has configured containerd
+- Check that cache service is accessible from nodes
+- Restart containerd on worker nodes if needed
+- Verify cache directory has sufficient space
 
+#### 3. Authentication Issues
+
+**Symptoms:**
+- HTTP 401/403 errors
+- Cannot pull private images
+
+**Diagnosis:**
 ```bash
-# Check DaemonSet logs
-kubectl logs -n container-caching daemonset/nvcf-container-cache-cc
+# Test authentication
+./container-cache-test.sh
 
-# Verify containerd configuration
-kubectl exec -n container-caching ds/nvcf-container-cache-cc -- cat /host/etc/containerd/config.toml
+# Check NGC credentials
+docker login nvcr.io
 ```
+
+**Solutions:**
+- Verify NGC API key is valid
+- Check pull secrets are correctly created
+- Ensure OAuth token exchange is working
 
 #### 4. Performance Issues
 
+**Symptoms:**
+- High memory usage
+- Slow response times
+- Cache misses
+
+**Diagnosis:**
 ```bash
 # Check resource usage
-kubectl top pods -n container-caching
-
-# Monitor nginx error logs
-kubectl logs -n container-caching nvcf-container-cache-0 -c server | grep ERROR
+kubectl -n container-caching top pods
 
 # Check cache statistics
-kubectl exec -n container-caching nvcf-container-cache-0 -- wget -qO- http://localhost:13128/stub_status
-
-# For performance optimization, consider disabling monitoring
-# See "Disable Monitoring" section for configuration details
+kubectl -n container-caching exec nvcf-container-cache-0 -c nginx-proxy -- \
+  wget -qO- http://localhost:13128/stub_status
 ```
+
+**Solutions:**
+- Increase resource limits
+- Adjust cache size and worker connections
+- Consider disabling monitoring for resource optimization
+- Check storage I/O performance
+
+#### 5. Storage Issues
+
+**Symptoms:**
+- PVCs not binding
+- Out of disk space
+- Cache cleanup not working
+
+**Diagnosis:**
+```bash
+# Check PVC status
+kubectl -n container-caching get pvc
+
+# Check disk usage
+kubectl -n container-caching exec nvcf-container-cache-0 -- df -h
+
+# Check storage class
+kubectl describe storageclass <storage-class-name>
+```
+
+**Solutions:**
+- Increase PVC size
+- Adjust `freeProxyPct` for more aggressive cleanup
+- Verify storage class supports dynamic provisioning
+- Check node disk space if using EmptyDir
+
+### Debug Commands
+
+```bash
+# View detailed pod information
+kubectl -n container-caching describe pod nvcf-container-cache-0
+
+# Check nginx configuration
+kubectl -n container-caching exec nvcf-container-cache-0 -c nginx-proxy -- \
+  nginx -T
+
+# View nginx error logs
+kubectl -n container-caching logs nvcf-container-cache-0 -c nginx-proxy | grep ERROR
+
+# Check service endpoints
+kubectl -n container-caching get endpoints nvcf-container-cache
+
+# Test internal connectivity
+kubectl -n container-caching exec nvcf-container-cache-0 -- \
+  curl -k https://nvcf-container-cache:30345/v2/
+
+# Monitor real-time cache activity
+kubectl -n container-caching logs -f nvcf-container-cache-0 -c nginx-proxy | \
+  grep -E '"upstream_cache_status":"(HIT|MISS)"'
+```
+
+---
+
+## Advanced Configuration
+
+### Custom nginx Configuration
+
+To customize nginx behavior, modify the configuration files in `deploy/files/`:
+
+- `nginx.conf`: Main nginx configuration
+- `container-cache.conf`: Container registry caching logic
+- `proxy-common.conf`: Common proxy settings
+- `proxy-cache.conf`: S3 proxy cache configuration
+
+### SSL/TLS Configuration
+
+#### Custom Certificates (Without Vault)
+
+```yaml
+# Mount custom certificates
+# Create ConfigMap with certificates
+kubectl -n container-caching create configmap custom-certs \
+  --from-file=tls.crt=/path/to/certificate.crt \
+  --from-file=tls.key=/path/to/private.key
+
+# Reference in values.yaml (requires template modification)
+```
+
+#### Certificate Rotation
+
+When using Vault, certificates are automatically rotated. For custom certificates:
+
+```bash
+# Update certificate ConfigMap
+kubectl -n container-caching create configmap custom-certs \
+  --from-file=tls.crt=/path/to/new-certificate.crt \
+  --from-file=tls.key=/path/to/new-private.key \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Restart pods to pick up new certificates
+kubectl -n container-caching rollout restart statefulset nvcf-container-cache
+```
+
+### Performance Optimization
+
+#### High-Throughput Configuration
+
+```yaml
+cache:
+  workerConnection: 16384
+  keyStorageSize: "1g"
+  maxSize: "10000g"
+  http2: "on"
+
+resources:
+  requests:
+    memory: "64Gi"
+    cpu: "16"
+  limits:
+    memory: "128Gi"
+    cpu: "32"
+
+# Use high-performance storage
+persistentVolumeClaim:
+  storageClassName: "premium-ssd"  # or equivalent high-IOPS class
+  sizeGB: 5000
+  sizeProxyGB: 10000
+
+# Target high-performance nodes
+nodeSelector:
+  node.kubernetes.io/instance-type: "c5n.4xlarge"  # High network performance
+```
+
+#### Memory Optimization
+
+```yaml
+# Disable monitoring to save memory
+monitoring:
+  enabled: false
+
+# Reduce cache size
+cache:
+  keyStorageSize: "10m"
+  maxSize: "100g"
+  workerConnection: 1000
+
+# Lower resource requests
+resources:
+  requests:
+    memory: "2Gi"
+    cpu: "1"
+  limits:
+    memory: "8Gi"
+    cpu: "4"
+```
+
+### Multi-Cluster Deployment
+
+For deploying across multiple clusters with shared configuration:
+
+```bash
+# Use environment-specific values files
+helm install nvcf-container-cache deploy/ \
+  --namespace container-caching \
+  --values deploy/values-gcp-ct1.yaml \
+  --set vault.clusterName=gcp-cluster-1
+
+helm install nvcf-container-cache deploy/ \
+  --namespace container-caching \  
+  --values deploy/values-aws-dev-1.yaml \
+  --set vault.clusterName=aws-cluster-1
+```
+
+### Monitoring Integration
+
+#### Prometheus Configuration
+
+The cache exposes metrics on port 9113 when monitoring is enabled:
+
+```yaml
+# ServiceMonitor for Prometheus Operator
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvcf-container-cache
+  namespace: container-caching
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nvcf-container-cache
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+```
+
+#### Grafana Dashboard
+
+Key metrics to monitor:
+- `nginx_cache_requests_total`: Cache hit/miss ratio
+- `nginx_connections_active`: Active connections
+- `nginx_cache_size_bytes`: Cache storage usage
+- Container pull times and success rates
+
+---
 
 ## Uninstallation
 
 ### 1. Remove Helm Deployment
 
 ```bash
+# Uninstall Helm release
 helm uninstall nvcf-container-cache -n container-caching
 ```
 
 ### 2. Clean Up Node Configuration
+
+The DaemonSet configures containerd on worker nodes. Clean up this configuration:
 
 ```bash
 # Deploy cleanup DaemonSet
@@ -595,56 +1034,61 @@ kubectl wait --for=condition=complete job/remove-containerd-config --timeout=300
 kubectl delete -f client/remove/remove-containerd-configuration.yaml
 ```
 
-### 3. Remove Namespace and PVCs
+### 3. Remove Persistent Data
 
 ```bash
-# Delete PVCs (if needed)
-kubectl delete pvc -n container-caching --all
+# Delete PVCs (WARNING: This deletes all cached data)
+kubectl -n container-caching delete pvc --all
 
 # Delete namespace
 kubectl delete namespace container-caching
 ```
 
-## Advanced Configuration
+### 4. Restart Containerd (If Needed)
 
-### Custom nginx Configuration
+On worker nodes, restart containerd to ensure clean state:
 
-You can customize nginx configuration by modifying the configuration files in `deploy/files/`:
-
-- `nginx.conf`: Main nginx configuration
-- `proxy-cache.conf`: S3 caching configuration
-- `container-cache.conf`: Container registry caching
-- `proxy-common.conf`: Common proxy settings
-
-### SSL/TLS Configuration
-
-For custom SSL configurations without Vault:
-
-```yaml
-# Custom certificate configuration
-# Place certificates in a ConfigMap or Secret and mount them
+```bash
+# On each worker node
+sudo systemctl restart containerd
 ```
+
+---
+
+## Support and Resources
+
+### Documentation Files
+
+| File | Description |
+|------|-------------|
+| `deploy/values.yaml` | Default configuration values |
+| `deploy/values-*.yaml` | Environment-specific examples |
+| `deploy/Chart.yaml` | Helm chart metadata |
+| `deploy/templates/` | Kubernetes resource templates |
+| `tests/container-cache/` | Testing framework and scripts |
+
+### Monitoring and Debugging
+
+- **Prometheus Metrics**: Available at `http://pod-ip:9113/metrics`
+- **Nginx Statistics**: Available at `http://pod-ip:13128/stub_status`  
+- **Cache Logs**: Use `kubectl logs` with container name `nginx-proxy`
 
 ### Performance Tuning
 
-For high-throughput environments:
+- **Cache Hit Ratio**: Target >80% for production workloads
+- **Memory Usage**: Monitor for cache efficiency vs resource usage
+- **Storage I/O**: Use high-performance storage classes for better performance
+- **Network**: Consider node placement for optimal network performance
 
-```yaml
-cache:
-  workerConnection: 16384
-  keyStorageSize: "1g"
-  maxSize: "10000g"
+### Contact Information
 
-# Consider node-specific optimizations
-nodeSelector:
-  node.kubernetes.io/instance-type: "c5n.4xlarge"  # High network performance
-```
+For issues, feature requests, or questions:
+- **NVCF Infrastructure Team**: Internal support channel
+- **Documentation**: This guide and inline comments in configuration files
+- **Testing**: Use provided test framework for validation
 
-## Support and Documentation
+---
 
-- **Configuration Files**: See `deploy/files/` for nginx configuration details
-- **Templates**: See `deploy/templates/` for Kubernetes resource templates
-- **Examples**: See `deploy/values-*.yaml` for environment-specific examples
-- **Monitoring**: Prometheus metrics available at `/metrics` endpoint
+**End of Document**
 
-For additional support, refer to the NVIDIA NGC documentation and your internal DevOps team.
+*This document covers the complete configuration, deployment, and testing of the NVCF Container Cache system. For the latest updates and additional configuration options, refer to the Helm chart templates and example values files.*
