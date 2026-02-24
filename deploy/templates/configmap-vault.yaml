@@ -6,6 +6,7 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
+{{- if .Values.vault.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -95,3 +96,4 @@ data:
     {{ "{{" }} end {{ "}}" }}
     {{ "{{" }} end {{ "}}" }}
     {{ "{{" }} end {{ "}}" }}
+{{- end }}

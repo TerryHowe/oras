@@ -70,7 +70,11 @@ spec:
           EOF
           done
           if [ "${VAULT_ENABLED}" = "true" ]; then
-            curl ${CERT_LOCATION} -o  /host/etc/ssl/nginx_container_cache.crt
+            if [ -z "${CERT_LOCATION}" ]; then
+              echo "CERT_LOCATION must be set when VAULT_ENABLED=true" >&2
+              exit 1
+            fi
+            curl -fsSL "${CERT_LOCATION}" -o /host/etc/ssl/nginx_container_cache.crt
           else
             cp /ca/root.crt.pem /host/etc/ssl/nginx_container_cache.crt
           fi

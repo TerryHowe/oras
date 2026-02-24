@@ -85,33 +85,25 @@ spec:
           args:
             - -c
             - |
+              set -euo pipefail
+
+              if [ "${VAULT_ENABLED}" = "false" ]; then
+                cp /etc/ssl/private/intermediate.key.pem /certs/leaf-ca.key
+                cp /etc/ssl/certs/intermediate.crt.pem  /certs/leaf-ca.crt
+                cat /certs/leaf-ca.crt /etc/ssl/certs/root.crt.pem > /certs/ssl-bundle.crt
+                chmod +r /certs/leaf-ca.key
+                exit 0
+              fi
+
               openssl req -new -newkey rsa:4096 -nodes \
               -keyout /certs/leaf-ca.key \
               -out /certs/leaf-ca.csr \
               -subj '/C=US/ST=California/L=Santa Clara/O=NVIDIA Corporation/OU=NVCF/CN=nvcf-proxy-leaf-ca'
 
               chmod +r /certs/leaf-ca.key
-
-              if [ "${VAULT_ENABLED}" = "false" ]; then
-
-                echo "basicConstraints=critical,CA:true,pathlen:0" > /tmp/intermediate.ext
-                echo "keyUsage=critical,keyCertSign,cRLSign" >> /tmp/intermediate.ext
-                echo "subjectKeyIdentifier=hash" >> /tmp/intermediate.ext
-                echo "authorityKeyIdentifier=keyid:always,issuer" >> /tmp/intermediate.ext
-
-                openssl x509 -req \
-                  -in /certs/leaf-ca.csr \
-                  -CA /etc/ssl/certs/intermediate.crt.pem \
-                  -CAkey /etc/ssl/certs/intermediate.key.pem \
-                  -CAcreateserial \
-                  -days 3650 \
-                  -out /certs/leaf-ca.crt \
-                  -extfile /tmp/intermediate.ext
-
-                # Create certificate bundle (chain)
-                cat /certs/leaf-ca.crt /etc/ssl/certs/intermediate.crt.pem /etc/ssl/certs/root.crt.pem > /certs/ssl-bundle.crt
-                cat /certs/ssl-bundle.crt
-              fi
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
           resources: { }
           volumeMounts:
             - name: certs
@@ -188,6 +180,9 @@ spec:
             - name: nginx-logging-formats-config
               mountPath: /etc/nginx/conf.d/sites/logging-formats.conf
               subPath: logging-formats.conf
+            - name: nginx-lua-config
+              mountPath: /etc/nginx/conf.d/lua
+              readOnly: true
             - name: token
               mountPath: /var/run/secrets/kubernetes.io/serviceaccount-vault
             - name: certs
@@ -237,6 +232,16 @@ spec:
         - name: nginx-logging-formats-config
           configMap:
             name: nvcf-nginx-config
+        - name: nginx-lua-config
+          configMap:
+            name: nvcf-nginx-config
+            items:
+            - key: lua-access.lua
+              path: lua-access.lua
+            - key: lua-gen-key.lua
+              path: lua-gen-key.lua
+            - key: lua-ssl.lua
+              path: lua-ssl.lua
         - name: nginx-default-config
           configMap:
             name: nvcf-default-config
@@ -275,7 +280,7 @@ spec:
             sizeLimit: {{ printf "%dGi" (default 100 (int $.Values.persistentVolumeClaim.sizeGB)) | quote }}
         - name: proxy-cache
           emptyDir:
-            sizeLimit: {{ printf "%dGi" (default 100 (int $.Values.persistentVolumeClaim.sizeProxyGB)) | quote }}
+            sizeLimit: {{ printf "%dGi" (default 200 (int $.Values.persistentVolumeClaim.sizeProxyGB)) | quote }}
 {{- else }}
   volumeClaimTemplates:
     - metadata:
@@ -294,6 +299,6 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: {{ printf "%dGi" (default 100 (int $.Values.persistentVolumeClaim.sizeProxyGB)) | quote }}
+            storage: {{ printf "%dGi" (default 200 (int $.Values.persistentVolumeClaim.sizeProxyGB)) | quote }}
         storageClassName: {{ $.Values.persistentVolumeClaim.storageClassName | default "azurefile" | quote }}
   {{- end }}
