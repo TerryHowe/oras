@@ -67,6 +67,9 @@ spec:
               [host."https://${NODE_IP}:{{ $.Values.service.port }}"]
               capabilities = ["pull", "resolve"]
               ca = "/etc/ssl/nginx_container_cache.crt"
+              skip_verify = true
+              [host."https://$host"]
+              capabilities = ["pull", "resolve"]
           EOF
           done
           if [ "${VAULT_ENABLED}" = "true" ]; then
