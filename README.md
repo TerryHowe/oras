@@ -34,13 +34,20 @@ limitations under the License.
 
 ## Overview
 
-NVCF Container Cache is a high-performance caching proxy for container registries. It acts as a transparent MITM proxy between the container runtime (containerd or CRI-O) and upstream registries, caching image layers and manifests to reduce bandwidth and improve pull times.
+NVCF Container Cache is a high-performance caching system with two complementary modes:
+
+- **Container Cache** -- caches container image pulls (OCI/Docker registry protocol) for containerd and CRI-O
+- **Proxy Cache** -- caches S3 objects, NGC assets, HuggingFace models, and Nucleus files via DNS-based MITM
+
+Both run in the same StatefulSet pod and share the OpenResty/Nginx engine with dynamic TLS certificate generation.
 
 ### Key Features
-- **Multi-runtime**: Supports both containerd and CRI-O
+- **Multi-runtime**: Supports both containerd and CRI-O for container image caching
+- **Multi-endpoint**: S3, NGC Files, HuggingFace CDN, Nucleus/LFT for proxy caching
 - **Multi-registry**: NGC, Docker Hub, GCR, ECR, and any OCI-compliant registry
-- **Transparent fallback**: If the cache is unavailable, pulls fall through to the upstream registry
-- **Dynamic TLS**: Generates leaf certificates on-the-fly signed by a bundled CA
+- **Transparent fallback**: If the cache is unavailable, container pulls fall through to the upstream registry
+- **DNS-based MITM**: nvcf-unbound DNS redirects S3/NGC/HF traffic to the proxy cache transparently
+- **Dynamic TLS**: Generates leaf certificates on-the-fly signed by a bundled CA (SNI-based)
 - **Auto-configuration**: DaemonSet configures container runtimes on every node automatically
 - **Disk-pressure aware**: `min_free` watermark prevents the cache from filling the disk
 - **Observable**: Prometheus metrics, structured JSON logs, optional OpenTelemetry traces
@@ -49,59 +56,51 @@ NVCF Container Cache is a high-performance caching proxy for container registrie
 
 ## Architecture
 
-![Architecture Diagram](docs/architecture.png)
+The system has two caching modes that serve different traffic types.
+
+### Container Cache
+
+Caches container image layers and manifests pulled by containerd or CRI-O. Routing is via explicit mirror configuration written by the DaemonSet -- no DNS trick involved.
+
+![Container Cache Architecture](docs/container-cache-architecture.png)
 
 ```
-                        +--------------------------+
-                        |   Upstream Registries    |
-                        |  (nvcr.io, docker.io,    |
-                        |   gcr.io, ECR, etc.)     |
-                        +------------+-------------+
-                                     |
-                                     | HTTPS (TLS)
-                                     |
-                    +----------------v-----------------+
-                    |     NVCF Container Cache Pod      |
-                    |  (StatefulSet, OpenResty/Nginx)   |
-                    |                                   |
-                    |  +-----------+  +-------------+   |
-                    |  | lua-ssl   |  | Container   |   |
-                    |  | (dynamic  |  | & Proxy     |   |
-                    |  |  certs)   |  | Cache Disk  |   |
-                    |  +-----------+  +-------------+   |
-                    |                                   |
-                    |  Ports: 13128 (containerd)        |
-                    |         30346+ (CRI-O per-reg)    |
-                    +-------+---------------+-----------+
-                            |               |
-                +-----------+               +----------+
-                | NodePort / ClusterIP                 |
-                |  (kube-proxy forwards)               |
-                +-----------+               +----------+
-                            |               |
-      +---------------------v---------------v--------------------+
-      |                 Kubernetes Nodes                          |
-      |                                                          |
-      |  +------------------+       +------------------+         |
-      |  | containerd       |       | CRI-O            |         |
-      |  |                  |       |                  |         |
-      |  | hosts.toml:      |       | registries.conf: |         |
-      |  |  1. Try cache    |       |  1. Try cache    |         |
-      |  |  2. Fallback to  |       |  2. Fallback to  |         |
-      |  |     upstream     |       |     upstream     |         |
-      |  +------------------+       +------------------+         |
-      |                                                          |
-      |  +--------------------------------------------------+   |
-      |  | DaemonSet (nvcf-container-cache-cc)               |   |
-      |  | - Writes hosts.toml for containerd                |   |
-      |  | - Writes registries.conf for CRI-O                |   |
-      |  | - Copies CA cert to /etc/ssl/                     |   |
-      |  | - Refreshes CRI-O mirrors every 5min              |   |
-      |  +--------------------------------------------------+   |
-      +----------------------------------------------------------+
+                     +---------------------------+
+                     |  Upstream Registries       |
+                     |  (nvcr.io, docker.io, etc) |
+                     +------------+--------------+
+                                  |
+                                  | HTTPS
+                                  v
+                  +-------------------------------+
+                  | NVCF Container Cache Pod       |
+                  | (OpenResty/Nginx, StatefulSet) |
+                  |                                |
+                  |  lua-ssl.lua    Cache Engine   |
+                  |  (dynamic TLS)  (disk cache)   |
+                  |                                |
+                  |  Ports: 13128 (containerd)     |
+                  |         30346+ (CRI-O)         |
+                  +-------+--------------+--------+
+                          |              |
+              cache HIT   |              |  cache MISS
+              (from disk) |              |  (fetch upstream)
+                          v              v
+     +----------------------------------------------------+
+     |            Kubernetes Worker Nodes                   |
+     |                                                     |
+     |  containerd            CRI-O                        |
+     |  hosts.toml:           registries.conf:             |
+     |   1. Try cache          1. Try cache                |
+     |   2. Fallback           2. Fallback                 |
+     |                                                     |
+     |  DaemonSet: writes mirror config, copies CA cert    |
+     |                                                     |
+     |  kubelet --> Pod: container image pull               |
+     +----------------------------------------------------+
 ```
 
-### How a cached pull works
+**How a cached pull works:**
 
 1. **kubelet** asks the container runtime to pull `nvcr.io/nvidia/cuda:12.4.0`
 2. **containerd/CRI-O** checks its mirror config (`hosts.toml` / `registries.conf`)
@@ -110,6 +109,54 @@ NVCF Container Cache is a high-performance caching proxy for container registrie
    - **HIT**: Returns the cached layer immediately
    - **MISS**: Fetches from the upstream registry, caches it, and returns it
 5. If the cache proxy is **unreachable**, the runtime falls back to the **upstream registry** directly
+
+### Proxy Cache
+
+Caches S3 objects, NGC assets, and HuggingFace models. Uses DNS-based MITM via nvcf-unbound: DNS resolution for configured domains returns a CNAME pointing to the cache service, so pods connect to the cache thinking it is the real endpoint. The cache terminates TLS using SNI (lua-ssl.lua generates a matching leaf certificate on the fly) and proxies to the real upstream.
+
+![Proxy Cache Architecture](docs/proxy-cache-architecture.png)
+
+```
+                     +---------------------------------------+
+                     |         Upstream Endpoints             |
+                     |  AWS S3 | NGC Files | HuggingFace CDN |
+                     +------------------+--------------------+
+                                        ^
+                                        | HTTPS (real upstream)
+                                        |
+  +---------------------------+    +----+------------------------------+
+  | nvcf-unbound DNS          |    | NVCF Proxy Cache Pod              |
+  | (dns-proxy namespace)     |    | (same StatefulSet, port 14128)    |
+  |                           |    |                                   |
+  | Intercepts DNS:           |    |  lua-ssl.lua    S3/NGC/HF routing |
+  |  s3.amazonaws.com         |    |  (SNI certs)    proxy_s3 cache    |
+  |  xfiles.ngc.nvidia.com    +--->|                 proxy_ngc cache   |
+  |  huggingface.co           |    |                                   |
+  |                           |    |  Proxy Cache PVC (disk)           |
+  | Returns CNAME:            |    +----+------------------------------+
+  |  -> nvcf-proxy-cache.svc  |         |
+  +----------+----------------+         | cache HIT / MISS
+             ^                          v
+             | 1. DNS query    3. HTTPS connect
+             |                 (thinks it's real S3)
+     +-------+------------------------------------+
+     |     Cluster Pods (Training/Inference Jobs)  |
+     |                                             |
+     |  Transparent to the application:            |
+     |  no config changes needed in the pod.       |
+     +---------------------------------------------+
+```
+
+**How DNS-based MITM caching works:**
+
+1. A **training pod** calls `s3.us-east-1.amazonaws.com` to download a dataset
+2. The DNS query goes to **nvcf-unbound**, which returns a CNAME pointing to `nvcf-proxy-cache.container-caching.svc.cluster.local`
+3. The pod connects to the **cache pod** on port 14128 via TLS, presenting the original hostname as SNI
+4. **lua-ssl.lua** dynamically generates a leaf certificate matching the SNI hostname
+5. The cache checks its **on-disk cache** (`proxy_s3` or `proxy_ngc` zone):
+   - **HIT**: Returns the cached response immediately
+   - **MISS**: Proxies to the real upstream, caches the response, and returns it
+6. The pod receives the response as if it came directly from S3 -- completely transparent
 
 ---
 
