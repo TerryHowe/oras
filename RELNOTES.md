@@ -16,6 +16,8 @@ limitations under the License.
 -->
 # NVCF Proxy Cache Release Notes
 
+#version 0.25.13
+https://jirasw.nvidia.com/browse/NVCF-9180
 #version 0.25.12
 https://jirasw.nvidia.com/browse/NVCF-9019
 
