@@ -76,3 +76,26 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Compute CRI-O registry port mappings.
+If .Values.crio.registryPorts is set, use it.
+Otherwise, derive ports from targetHost list starting at basePort.
+*/}}
+{{- define "nvcf-container-cache.crioRegistryPorts" -}}
+{{- if and .Values.crio.registryPorts (gt (len .Values.crio.registryPorts) 0) -}}
+{{- range .Values.crio.registryPorts }}
+{{ .name }}:
+  registry: {{ .registry }}
+  port: {{ .port }}
+{{- end }}
+{{- else -}}
+{{- $base := (.Values.crio.basePort | default (add (.Values.service.port | default 30345) 1)) -}}
+{{- $hosts := splitList "," (.Values.targetHost | default "nvcr.io") -}}
+{{- range $i, $host := $hosts }}
+{{ $host | lower | replace "." "-" | replace "/" "-" }}:
+  registry: {{ $host }}
+  port: {{ add $base $i }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -21,13 +21,13 @@ metadata:
     app: {{ $.Release.Name }}
     {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 data:
-  proxy-cache.conf: |-
-     {{ tpl (.Files.Get "files/proxy-cache.conf") . | nindent 4 }}
-  proxy-nucleus-cache.conf: |-
-     {{ tpl (.Files.Get "files/proxy-nucleus-cache.conf") . | nindent 4 }}
-  ngc.conf: |-
-     {{ tpl (.Files.Get "files/ngc.conf") . | nindent 4 }}
-  hf.conf: |-
-     {{ tpl (.Files.Get "files/hf.conf") . | nindent 4 }}
-  proxy-common.conf: |-
-     {{ tpl (.Files.Get "files/proxy-common.conf") . | nindent 4 }}
+  proxy-cache.conf: |
+{{ tpl (.Files.Get "files/proxy-cache.conf") . | indent 4 }}
+  proxy-nucleus-cache.conf: |
+{{ tpl (.Files.Get "files/proxy-nucleus-cache.conf") . | indent 4 }}
+  ngc.conf: |
+{{ tpl (.Files.Get "files/ngc.conf") . | indent 4 }}
+  hf.conf: |
+{{ tpl (.Files.Get "files/hf.conf") . | indent 4 }}
+  proxy-common.conf: |
+{{ tpl (.Files.Get "files/proxy-common.conf") . | indent 4 }}

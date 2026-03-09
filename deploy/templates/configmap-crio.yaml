@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: Copyright (c) NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvcf-crio-utils
+  namespace: {{ $.Release.Namespace | quote }}
+  labels:
+    app: {{ $.Release.Name }}
+    {{- include "nvcf-container-cache.labels" . | nindent 4 }}
+data:
+  get_cache_pod_ips.py: |-
+    import json
+    import os
+    import ssl
+    import sys
+    import urllib.request
+
+    def main() -> None:
+        host = os.environ.get("KUBERNETES_SERVICE_HOST")
+        port = os.environ.get("KUBERNETES_SERVICE_PORT")
+        if not host or not port:
+            return
+
+        token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        ns_path = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+        ca_path = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        if not (os.path.exists(token_path) and os.path.exists(ns_path) and os.path.exists(ca_path)):
+            return
+
+        token = open(token_path, "r").read().strip()
+        namespace = open(ns_path, "r").read().strip()
+
+        url = (
+            f"https://{host}:{port}/api/v1/namespaces/{namespace}/pods"
+            "?labelSelector=app%3Dnvcf-proxy-cache"
+        )
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        ctx = ssl.create_default_context(cafile=ca_path)
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=5) as resp:
+                data = json.load(resp)
+        except Exception:
+            return
+
+        ips = sorted(
+            {
+                item.get("status", {}).get("podIP")
+                for item in data.get("items", [])
+                if item.get("status", {}).get("phase") == "Running"
+                and item.get("status", {}).get("podIP")
+            }
+        )
+        if ips:
+            print("\n".join(ips))
+
+    if __name__ == "__main__":
+        main()

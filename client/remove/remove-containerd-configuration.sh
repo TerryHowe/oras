@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # SPDX-FileCopyrightText: Copyright (c) NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -12,6 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -euo pipefail
+
+echo "Deploying cleanup DaemonSet..."
 kubectl create -f ./client/remove/remove-containerd-configuration.yaml
-kubectl wait --for=condition=ready pod -l name=remove-containerd-configuration -n kube-system --timeout=60s
+
+echo "Waiting for cleanup pods to complete..."
+kubectl wait --for=condition=ready pod -l name=remove-containerd-configuration -n kube-system --timeout=120s
+
+echo "Removing cleanup DaemonSet..."
 kubectl delete -f ./client/remove/remove-containerd-configuration.yaml
+
+echo "Done. containerd and CRI-O configurations have been cleaned up on all nodes."

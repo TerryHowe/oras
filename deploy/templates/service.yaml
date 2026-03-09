@@ -22,6 +22,10 @@ metadata:
     {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type | default "ClusterIP" }}
+  {{- if and (eq .Values.service.type "NodePort") (.Values.crio.nodePortLocal | default true) }}
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Local
+  {{- end }}
   ports:
     - port: {{ .Values.service.port | default 30345 }}
       {{ if eq .Values.service.type "NodePort" }}
@@ -29,5 +33,16 @@ spec:
       {{ end }}
       targetPort: https
       name: https
+{{- $crioPorts := include "nvcf-container-cache.crioRegistryPorts" . | fromYaml -}}
+{{- if $crioPorts }}
+{{- range $name, $val := $crioPorts }}
+    - port: {{ $val.port }}
+      {{ if eq $.Values.service.type "NodePort" }}
+      nodePort: {{ $val.port }}
+      {{ end }}
+      targetPort: crio-{{ $name }}
+      name: crio-{{ $name }}
+{{- end }}
+{{- end }}
   selector:
     {{- include "nvcf-container-cache.selectorLabels" . | nindent 4 }}

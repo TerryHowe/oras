@@ -21,5 +21,5 @@ metadata:
     app: {{ $.Release.Name }}
     {{- include "nvcf-container-cache.labels" . | nindent 4 }}
 data:
-  default.conf: |-
-    {{ tpl (.Files.Get "files/default.conf") . | nindent 4 }}
+  default.conf: |
+{{ tpl (.Files.Get "files/default.conf") . | indent 4 }}

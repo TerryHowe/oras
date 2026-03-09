@@ -101,6 +101,18 @@ vault:
 traces:
   enabled: false
 
+# CRI-O configuration.
+# When CRI-O is detected on nodes, the DaemonSet configures registry mirrors.
+crio:
+  # Per-registry port mappings (auto-derived from targetHost if not set).
+  registryPorts: []
+  # Base port for auto-derived CRI-O ports (default: service.port + 1).
+  # basePort: 30346
+  # Mirror hostname used in CRI-O registries.conf when pod IPs are unavailable.
+  # mirrorHost: nvcf-container-cache.container-caching.svc.cluster.local
+  # Use externalTrafficPolicy=Local on NodePort services.
+  nodePortLocal: true
+
 # Monitoring configuration.
 monitoring:
   enabled: false
