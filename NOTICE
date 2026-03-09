@@ -17,26 +17,5 @@ limitations under the License.
 Third-Party Dependencies and Licenses
 ========================================================================
 
-This project includes the following third-party direct dependencies
-(from gfn/cert-watcher/go.mod):
-
-------------------------------------------------------------------------
-github.com/fsnotify/fsnotify v1.6.0
-License: BSD 3-Clause
-Copyright: The fsnotify Authors
-https://github.com/fsnotify/fsnotify
-
-------------------------------------------------------------------------
-github.com/ohler55/ojg v1.17.2
-License: MIT License
-Copyright: Peter Ohler
-https://github.com/ohler55/ojg
-
-========================================================================
-Transitive Dependencies (indirect)
-========================================================================
-
-MIT License:
-  - golang.org/x/sys v0.0.0-20220908164124-27713097b956
-    Copyright: The Go Authors
-    https://golang.org/x/sys
+This project has no third-party code dependencies. It consists of Helm
+charts, nginx configuration files, shell scripts, and Lua scripts.
