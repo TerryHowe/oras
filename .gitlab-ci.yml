@@ -118,6 +118,19 @@ variables:
       when: manual
 
 #####################
+# check
+#####################
+
+check:helm-template:
+  stage: check
+  image: ${CI_REGISTRY}/cds/cds-containers/tools:latest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - helm template container-cache ./deploy --debug > /dev/null
+
+#####################
 # build (SBOM)
 #####################
 
