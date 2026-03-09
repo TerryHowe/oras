@@ -189,9 +189,10 @@ spec:
                 cp /host/etc/ssl/nginx_container_cache.crt "/host/etc/containers/certs.d/${NODE_IP}:${port}/ca.crt"
               done
             fi
-            if command -v nsenter >/dev/null 2>&1; then
-              nsenter -t 1 -m -u -i -n -p -- systemctl reload crio >/dev/null 2>&1 || true
-            fi
+            # Rely on auto_reload_registries=true instead of explicit reload.
+            # if command -v nsenter >/dev/null 2>&1; then
+            #   nsenter -t 1 -m -u -i -n -p -- systemctl reload crio >/dev/null 2>&1 || true
+            # fi
           }
 
           if [ "${VAULT_ENABLED}" = "true" ]; then
