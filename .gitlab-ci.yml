@@ -81,7 +81,6 @@ variables:
   NGC_ORG_nvcf_internal: 0544956542906249
   NGC_ORG_nvstaging: nvstaging
   SONAR_PROJECT_KEY: SW-Cloud_NVCF_NVCF-Container-Cache_nvcf-container-cache
-  SONAR_HOST_URL: https://sonarqube.nvidia.com
 
 #####################
 # package
