@@ -440,6 +440,26 @@ kubectl -n container-caching exec ds/nvcf-container-cache-cc -- \
   cat /host/etc/containers/registries.conf.d/nvcf-container-cache.conf
 ```
 
+---
+
+## Code Quality (SonarQube)
+
+This project is scanned by SonarQube on every MR and main branch push.
+
+- **Project**: `SW-Cloud_NVCF_NVCF-Container-Cache_nvcf-container-cache`
+- **Dashboard**: [SonarQube](https://sonarqube.nvidia.com/dashboard?id=SW-Cloud_NVCF_NVCF-Container-Cache_nvcf-container-cache)
+
+### Setup
+
+The `SONAR_TOKEN` CI/CD variable must be set in the GitLab project settings:
+
+1. Go to **Settings > CI/CD > Variables**
+2. Add `SONAR_TOKEN` (masked, protected) with the token from the Sonar project
+
+The scan runs in the `code-quality` stage and analyzes Lua scripts and Helm templates under `deploy/files/` and `deploy/templates/`. It is configured with `allow_failure: true` so it won't block merges while the project baseline is established.
+
+---
+
 ### Debug commands
 
 ```bash
