@@ -158,6 +158,19 @@ Caches S3 objects, NGC assets, and HuggingFace models. Uses DNS-based MITM via n
    - **MISS**: Proxies to the real upstream, caches the response, and returns it
 6. The pod receives the response as if it came directly from S3 -- completely transparent
 
+### Authentication Flow (Container Registries)
+
+The cache validates credentials on **every request** by sending a HEAD to the upstream registry before serving cached content. This ensures revoked or rotated keys are rejected immediately.
+
+![Container Registry Auth Flow](docs/container-registry-auth-flow.png)
+
+Key behaviors:
+- **Key rotation**: Old keys are rejected immediately. The cache never serves content with stale credentials.
+- **Public registries**: HEAD with no auth header returns 200, so caching works for all users with no configuration needed.
+- **Private registries**: Each request is validated against the upstream. Different users sharing the same cluster get the same cached blobs (blobs are content-addressed by SHA256, so identical content is safe to share).
+- **Manifest by tag** (e.g., `:latest`): Never cached. Tags are mutable, so every request goes to the upstream registry to get the current digest.
+- **Node-local cache**: Once an image is pulled to a node, it is available to all pods on that node without auth. Set `imagePullPolicy: Always` to force re-validation through the cache on every pod start.
+
 ---
 
 ## Prerequisites
