@@ -17,5 +17,35 @@ limitations under the License.
 Third-Party Dependencies and Licenses
 ========================================================================
 
-This project has no third-party code dependencies. It consists of Helm
-charts, nginx configuration files, shell scripts, and Lua scripts.
+This source repository contains only NVIDIA-authored code: Helm charts,
+Nginx configuration files, shell scripts, and Lua scripts. No third-party
+source code is distributed in this repository.
+
+At runtime, the Lua scripts depend on modules provided by the OpenResty
+base container image. These are NOT distributed in this repo but are
+listed here for completeness:
+
+------------------------------------------------------------------------
+OpenResty (including bundled modules)
+------------------------------------------------------------------------
+  License: BSD-2-Clause
+  URL:     https://openresty.org/
+  Used by: All Lua scripts (ngx.ssl, resty.lock)
+
+------------------------------------------------------------------------
+lua-resty-openssl
+------------------------------------------------------------------------
+  License: BSD-2-Clause
+  URL:     https://github.com/fffonion/lua-resty-openssl
+  Used by: deploy/files/lua/lua-ssl.lua, deploy/files/lua/lua-gen-key.lua
+           (resty.openssl.pkey, resty.openssl.x509, resty.openssl.bn,
+            resty.openssl.rand, resty.openssl.x509.extension,
+            resty.openssl.x509.name, resty.openssl.x509.altname,
+            resty.openssl.x509.crl)
+
+------------------------------------------------------------------------
+lua-resty-http
+------------------------------------------------------------------------
+  License: BSD-2-Clause
+  URL:     https://github.com/ledgetech/lua-resty-http
+  Used by: deploy/files/lua/lua-access.lua (resty.http)
