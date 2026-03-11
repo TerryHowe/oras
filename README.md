@@ -23,6 +23,10 @@ limitations under the License.
 ## Table of Contents
 - [Overview](#overview)
 - [Architecture](#architecture)
+  - [Container Cache](#container-cache)
+  - [Proxy Cache](#proxy-cache)
+  - [Authentication Flow (Container Registries)](#authentication-flow-container-registries)
+  - [Authentication Flow (S3 Proxy Cache)](#authentication-flow-s3-proxy-cache)
 - [Prerequisites](#prerequisites)
 - [Configuration Reference](#configuration-reference)
 - [Deployment Guide](#deployment-guide)
@@ -170,6 +174,71 @@ Key behaviors:
 - **Private registries**: Each request is validated against the upstream. Different users sharing the same cluster get the same cached blobs (blobs are content-addressed by SHA256, so identical content is safe to share).
 - **Manifest by tag** (e.g., `:latest`): Never cached. Tags are mutable, so every request goes to the upstream registry to get the current digest.
 - **Node-local cache**: Once an image is pulled to a node, it is available to all pods on that node without auth. Set `imagePullPolicy: Always` to force re-validation through the cache on every pod start.
+
+### Authentication Flow (S3 Proxy Cache)
+
+The S3 proxy cache validates access on every request using `lua-access.lua`. The logic differs by request type (HEAD, presigned URL GET, normal GET) and uses shared-memory caches to avoid redundant upstream calls during burst traffic.
+
+![S3 Proxy Cache Auth Flow](docs/s3-proxy-auth-flow.png)
+
+```
+                   +-- Cache disabled? (no-cache header) --YES--> Bypass, proxy direct to S3
+                   |
+  S3 request ----->+
+  (port 14128)     |
+                   +-- Request method?
+                       |
+         +-------------+-------------+
+         |             |             |
+       HEAD         GET+presigned  Normal GET
+         |           URL             |
+         v             |             v
+  In HEAD auth         v        Public URL?
+    cache? ----YES--> Skip     (no Authorization,
+         |           auth       no X-Amz-Signature)
+         NO            |             |
+         |        In presigned  YES: skip auth,
+         v        URL cache?    cache shared
+  Lock by URI,         |        by all users
+  HEAD to S3     YES: skip           |
+  with headers   auth          NO: send full
+         |             |        request to S3
+         v             NO       with Authorization
+  S3 200/404?          |             |
+  YES: cache     Lock, GET           v
+  auth result    to S3 with    S3 200?
+  (TTL-based)    presigned     YES: proceed
+         |       params        NO: return 403
+         |             |
+         |        S3 200?
+         |        YES: cache
+         |        until expiry
+         |        NO: return
+         |        403/404
+         |             |
+         +------+------+------+
+                |
+                v
+         In disk cache
+         (proxy_s3)?
+        /            \
+      YES             NO
+       |               |
+   CACHE HIT       CACHE MISS
+   serve from      fetch from
+   disk            S3, store,
+                   return
+```
+
+Key behaviors:
+- **Cache key**: `bucket_region | bucket_name | method | URI | versionId | If-Match | filtered_args | range`. This ensures different buckets, versions, and byte ranges are cached independently.
+- **Presigned URLs**: Cached until their `X-Amz-Expires` time minus a 10-second safety margin. This avoids serving content after the presigned URL has expired.
+- **HEAD auth caching**: HEAD results are cached in shared memory with a configurable TTL. This dramatically reduces upstream calls during burst traffic (e.g., hundreds of pods starting simultaneously and checking the same S3 object).
+- **Public S3 objects**: If a request has no `Authorization` header and no `X-Amz-Signature` query parameter, it is treated as public. No upstream auth check is performed, and the cached object is shared across all users.
+- **Locking**: Concurrent requests for the same URI are serialized using a lock (`resty.lock`) to avoid thundering herd -- only one request performs the upstream auth check, and subsequent requests use the cached result.
+- **Stale cache resilience**: On upstream errors (500/502/503/504), stale cached content is served rather than returning an error to the client.
+- **If-Match / ETag**: The `If-Match` header is preserved end-to-end (S3 normally expects it for content integrity) and is included in the cache key to avoid serving mismatched content.
+- **Last-Modified validation**: On cache HIT, the proxy compares the cached `Last-Modified` timestamp against the upstream value. If upstream is newer, the stale entry is purged and a 429 is returned so the client retries and gets fresh content.
 
 ---
 
