@@ -67,6 +67,9 @@ spec:
         - name: crio-utils
           mountPath: /opt/nvcf/crio
           readOnly: true
+        - name: update-config
+          mountPath: /opt/nvcf/containerd
+          readOnly: true
         command: ["/bin/bash"]
         args:
         - -c
@@ -220,39 +223,7 @@ spec:
               capabilities = ["pull", "resolve"]
           EOF
             done
-            python3 -c '
-          import os, sys, shutil
-          try:
-              import toml
-          except ImportError:
-              sys.exit("toml module not available")
-
-          config_file = "/host/etc/containerd/config.toml"
-          if not os.path.exists(config_file):
-              print(f"Warning: {config_file} not found, skipping")
-              sys.exit(0)
-
-          with open(config_file, "r") as f:
-              config = toml.load(f)
-
-          plugins = config.setdefault("plugins", {})
-          cri = plugins.setdefault("io.containerd.grpc.v1.cri", {})
-          registry = cri.setdefault("registry", {})
-          registry.pop("mirrors", None)
-          registry["config_path"] = "/etc/containerd/certs.d"
-
-          backup_file = config_file + ".bak"
-          shutil.copy2(config_file, backup_file)
-
-          try:
-              with open(config_file, "w") as f:
-                  toml.dump(config, f)
-              print(f"Updated config_path in {config_file} successfully.")
-          except Exception as e:
-              print(f"Error writing config, restoring backup: {e}")
-              shutil.copy2(backup_file, config_file)
-              sys.exit(1)
-          '
+            python3 /opt/nvcf/containerd/update_config.py /host/etc/containerd/config.toml
           fi
 
           if [ -d /host/etc/containers ]; then
@@ -283,3 +254,6 @@ spec:
       - name: crio-utils
         configMap:
           name: nvcf-crio-utils
+      - name: update-config
+        configMap:
+          name: nvcf-update-config
