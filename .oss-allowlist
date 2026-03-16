@@ -16,7 +16,6 @@ client/**
 
 # Documentation and architecture diagrams
 docs/**
-playbooks/**
 RELNOTES.md
 NOTICE
 
