@@ -67,6 +67,9 @@ spec:
         - name: crio-utils
           mountPath: /opt/nvcf/crio
           readOnly: true
+        - name: update-config
+          mountPath: /opt/nvcf/containerd
+          readOnly: true
         command: ["/bin/bash"]
         args:
         - -c
@@ -220,7 +223,7 @@ spec:
               capabilities = ["pull", "resolve"]
           EOF
             done
-            python3 update_config.py /host/etc/containerd/config.toml
+            python3 /opt/nvcf/containerd/update_config.py /host/etc/containerd/config.toml
           fi
 
           if [ -d /host/etc/containers ]; then
@@ -251,3 +254,6 @@ spec:
       - name: crio-utils
         configMap:
           name: nvcf-crio-utils
+      - name: update-config
+        configMap:
+          name: nvcf-update-config
