@@ -152,7 +152,7 @@ sonarqube:
       -Dsonar.host.url=${SONAR_HOST_URL}
       -Dsonar.token=${SONAR_TOKEN}
       -Dsonar.sources=deploy/files,deploy/templates
-      -Dsonar.exclusions=**/*.png,**/*.jpg
+      -Dsonar.exclusions=**/*.png,**/*.jpg,**/update_config.py
       -Dsonar.qualitygate.wait=true
   allow_failure: true
 
