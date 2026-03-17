@@ -16,8 +16,15 @@ limitations under the License.
 -->
 # NVCF Proxy Cache Release Notes
 
+#version 0.25.15
+Fix lua errors in container-cache logs
+
+#version 0.25.14
+https://nvbugspro.nvidia.com/bug/5979011
+
 #version 0.25.13
 https://jirasw.nvidia.com/browse/NVCF-9180
+
 #version 0.25.12
 https://jirasw.nvidia.com/browse/NVCF-9019
 
