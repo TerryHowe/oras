@@ -93,7 +93,7 @@ Otherwise, derive ports from targetHost list starting at basePort.
 {{- $base := (.Values.crio.basePort | default (add (.Values.service.port | default 30345) 1)) -}}
 {{- $hosts := splitList "," (.Values.targetHost | default "nvcr.io") -}}
 {{- range $i, $host := $hosts }}
-{{ $host | lower | replace "." "-" | replace "/" "-" }}:
+{{ $host | lower | replace "." "-" | replace "/" "-" | trunc 10 | trimSuffix "-" }}:
   registry: {{ $host }}
   port: {{ add $base $i }}
 {{- end }}
