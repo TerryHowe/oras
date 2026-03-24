@@ -16,6 +16,9 @@ limitations under the License.
 -->
 # NVCF Proxy Cache Release Notes
 
+#version 0.25.17
+OV sbom work
+
 #version 0.25.16
 https://jirasw.nvidia.com/browse/NVCF-9561
 

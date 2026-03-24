@@ -168,12 +168,13 @@ build:template:
   rules:
     - if: $CI_COMMIT_TAG
   script:
-    - mkdir -p rendered
-    - helm template container-cache ./deploy --output-dir rendered/
-    - echo "Rendered $(find rendered/ -name '*.yaml' | wc -l) manifest files"
+    - mkdir -p out
+    - helm template container-cache ./deploy > out/all.yaml
+    - echo "Rendered manifests:"
+    - grep "image:" out/all.yaml || true
   artifacts:
     paths:
-      - rendered/
+      - out/
     expire_in: 1 day
 
 # Generate SPDX 2.3 SBOM and plain-text artifact list from rendered manifests.
@@ -188,15 +189,17 @@ build:sbom:
     - if: $CI_COMMIT_TAG
   script:
     - VERSION="${CI_COMMIT_TAG}"
-    - mkdir -p sbom-artifacts helmfile.d
+    - mkdir -p sbom-artifacts
     - |
       generate-sbom --format=sbom,text \
+        --scan-env-keys="*_CONTAINER,*_IMAGE" \
         --scan-registries="nvcr.io" \
-        -d ./rendered -o ./sbom-artifacts local
+        -d ./out -o ./sbom-artifacts local
     - mv ./sbom-artifacts/sbom-local.spdx.json "./sbom-artifacts/sbom-${VERSION}.spdx.json"
     - mv ./sbom-artifacts/artifacts-local.txt "./sbom-artifacts/artifacts-${VERSION}.txt"
     - echo "Generated artifacts:"
     - ls -la sbom-artifacts/
+    - cat "./sbom-artifacts/artifacts-${VERSION}.txt"
   artifacts:
     paths:
       - sbom-artifacts/

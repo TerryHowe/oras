@@ -24,7 +24,7 @@ requests.exceptions.SSLError: HTTPSConnectionPool(host='proxy-cache-validate.s3.
 
 The above is from a python application, but application in other languages will have similar errors.
 
-We provide the needed CA certificates under `/etc/ssl/certs/` (see [the `add-certificates-volume` kyverno rule](https://gitlab-master.nvidia.com/nvcf/nvcf-cache/kyverno/-/blob/main/kyverno-cert-mount.yaml)).
+We provide the needed CA certificates under `/etc/ssl/certs/` (see [the `add-certificates-volume` kyverno rule](https://gitlab-master.nvidia.com/ncp/nvcf/application-services/nvcf-cache/nvcf-container-cache/-/blob/main/kyverno-cert-mount.yaml)).
 
 ## Verify there are no errors in applying the Kyverno ClusterPolicy
 
