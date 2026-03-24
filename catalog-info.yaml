@@ -18,7 +18,7 @@ metadata:
   name: "nvcf-proxycache"
   description: NVCF Proxycache
   annotations:
-    gitlab.com/project-slug: "nvcf/nvcf-cache/nvcf-container-cache"
+    gitlab.com/project-slug: "ncp/nvcf/application-services/nvcf-cache/nvcf-container-cache"
     nvcf.ngc.nvidia.com/env: "prd"
     pagerduty.com/service-id: "PC3BRCH"
     rootly.com/organization-id: "dgxc"
