@@ -168,10 +168,9 @@ build:template:
   rules:
     - if: $CI_COMMIT_TAG
   script:
-    - mkdir -p out
-    - helm template container-cache ./deploy > out/all.yaml
+    - helm template container-cache ./deploy --output-dir ./out
     - echo "Rendered manifests:"
-    - grep "image:" out/all.yaml || true
+    - grep -r "image:" out/ || true
   artifacts:
     paths:
       - out/
@@ -187,6 +186,11 @@ build:sbom:
       artifacts: true
   rules:
     - if: $CI_COMMIT_TAG
+  variables:
+    SERVER_IMAGE: nvcr.io/nv-ngc-devops/nvcf-container-cache:v1.1.34
+    EXPORTER_IMAGE: nvcr.io/nv-ngc-devops/nginx-prometheus-exporter:1.0
+    CERTIFICATES_IMAGE: nvcr.io/nv-ngc-devops/nvcf-proxy-tls-certs:1.2.5
+    CUDA_IMAGE: nvcr.io/nvidia/cuda:12.3.2-base-ubuntu22.04
   script:
     - VERSION="${CI_COMMIT_TAG}"
     - mkdir -p sbom-artifacts helmfile.d
