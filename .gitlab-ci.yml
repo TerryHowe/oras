@@ -171,29 +171,6 @@ build:template:
     - helm template container-cache ./deploy --output-dir ./out
     - echo "Rendered manifests:"
     - grep -r "image:" out/ || true
-    # generate-sbom --scan-env-keys matches YAML keys ending in _IMAGE / _CONTAINER,
-    # not the Pod spec key "image:". Bare key/value YAML is ignored; use a ConfigMap
-    # so manifests parse as Kubernetes objects and data.* keys match *_IMAGE.
-    - |
-      {
-        printf '%s\n' \
-          'apiVersion: v1' \
-          'kind: ConfigMap' \
-          'metadata:' \
-          '  name: sbom-image-index' \
-          '  labels:' \
-          '    nvidia.com/generate-sbom: "true"' \
-          'data:'
-        n=0
-        while IFS= read -r img; do
-          [ -z "$img" ] && continue
-          printf '  SBOM_%s_IMAGE: "%s"\n' "$n" "$img"
-          n=$((n+1))
-        done < <(find out -name '*.yaml' ! -name 'sbom-image-index.configmap.yaml' | while IFS= read -r f; do
-          [ -f "$f" ] && grep -h '[[:space:]]*image:' "$f"
-        done | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^"//; s/"$//; s/[[:space:]]+$//' | sort -u)
-      } > out/sbom-image-index.configmap.yaml
-    - echo "SBOM image index ConfigMap:" && cat out/sbom-image-index.configmap.yaml
   artifacts:
     paths:
       - out/
@@ -211,14 +188,19 @@ build:sbom:
     - if: $CI_COMMIT_TAG
   script:
     - VERSION="${CI_COMMIT_TAG}"
-    - mkdir -p sbom-artifacts helmfile.d
+    - mkdir -p sbom-artifacts
+    # generate-sbom does not extract standard Pod/Job image: fields; SPDX may stay
+    # minimal. REQ-1.1 plaintext list is filled from rendered manifests below.
     - |
       generate-sbom --format=sbom,text \
         --scan-env-keys="*_CONTAINER,*_IMAGE" \
-        --scan-registries="nvcr.io" \
         -d ./out -o ./sbom-artifacts local
     - mv ./sbom-artifacts/sbom-local.spdx.json "./sbom-artifacts/sbom-${VERSION}.spdx.json"
     - mv ./sbom-artifacts/artifacts-local.txt "./sbom-artifacts/artifacts-${VERSION}.txt"
+    - |
+      find out -type f -name '*.yaml' -exec grep -h '[[:space:]]*image:' {} \; 2>/dev/null \
+        | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^"//; s/"$//; s/[[:space:]]+$//' \
+        | sort -u > "./sbom-artifacts/artifacts-${VERSION}.txt"
     - echo "Generated artifacts:"
     - ls -la sbom-artifacts/
     - cat "./sbom-artifacts/artifacts-${VERSION}.txt"
