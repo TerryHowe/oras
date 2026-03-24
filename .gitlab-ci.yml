@@ -194,6 +194,15 @@ build:sbom:
   script:
     - VERSION="${CI_COMMIT_TAG}"
     - mkdir -p sbom-artifacts helmfile.d
+    - echo "=== DEBUG out/ directory structure ==="
+    - find out/ -type f -name "*.yaml" 2>/dev/null || echo "NO YAML files found in out/"
+    - echo "=== DEBUG image lines in out/ ==="
+    - grep -r "image:" out/ 2>/dev/null || echo "NO image lines found"
+    - echo "=== DEBUG env vars matching *_IMAGE ==="
+    - env | grep -E "_IMAGE|_CONTAINER" || echo "NO matching env vars"
+    - echo "=== DEBUG generate-sbom help ==="
+    - generate-sbom --help 2>&1 | head -40 || true
+    - echo "=== Running generate-sbom ==="
     - |
       generate-sbom --format=sbom,text \
         --scan-env-keys="*_CONTAINER,*_IMAGE" \
