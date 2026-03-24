@@ -172,18 +172,28 @@ build:template:
     - echo "Rendered manifests:"
     - grep -r "image:" out/ || true
     # generate-sbom --scan-env-keys matches YAML keys ending in _IMAGE / _CONTAINER,
-    # not the Pod spec key "image:". Emit a companion file the scanner can read.
+    # not the Pod spec key "image:". Bare key/value YAML is ignored; use a ConfigMap
+    # so manifests parse as Kubernetes objects and data.* keys match *_IMAGE.
     - |
-      printf '# Generated for generate-sbom (--scan-env-keys *_IMAGE)\n' > out/sbom-keyed-images.yaml
-      n=0
-      while IFS= read -r img; do
-        [ -z "$img" ] && continue
-        printf 'SBOM_%s_IMAGE: "%s"\n' "$n" "$img" >> out/sbom-keyed-images.yaml
-        n=$((n+1))
-      done < <(find out -name '*.yaml' | while IFS= read -r f; do
-        [ -f "$f" ] && grep -h '[[:space:]]*image:' "$f"
-      done | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^"//; s/"$//; s/[[:space:]]+$//' | sort -u)
-    - echo "SBOM keyed images:" && cat out/sbom-keyed-images.yaml
+      {
+        printf '%s\n' \
+          'apiVersion: v1' \
+          'kind: ConfigMap' \
+          'metadata:' \
+          '  name: sbom-image-index' \
+          '  labels:' \
+          '    nvidia.com/generate-sbom: "true"' \
+          'data:'
+        n=0
+        while IFS= read -r img; do
+          [ -z "$img" ] && continue
+          printf '  SBOM_%s_IMAGE: "%s"\n' "$n" "$img"
+          n=$((n+1))
+        done < <(find out -name '*.yaml' ! -name 'sbom-image-index.configmap.yaml' | while IFS= read -r f; do
+          [ -f "$f" ] && grep -h '[[:space:]]*image:' "$f"
+        done | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^"//; s/"$//; s/[[:space:]]+$//' | sort -u)
+      } > out/sbom-image-index.configmap.yaml
+    - echo "SBOM image index ConfigMap:" && cat out/sbom-image-index.configmap.yaml
   artifacts:
     paths:
       - out/
