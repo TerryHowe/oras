@@ -199,7 +199,7 @@ build:sbom:
     - mv ./sbom-artifacts/artifacts-local.txt "./sbom-artifacts/artifacts-${VERSION}.txt"
     - |
       find out -type f -name '*.yaml' -exec grep -h '[[:space:]]*image:' {} \; 2>/dev/null \
-        | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^"//; s/"$//; s/[[:space:]]+$//' \
+        | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^"//; s/"$//; s/[[:space:]]+$//; s#^[^/]+\.(io|com|net|org|ai|dev|cloud)/##' \
         | sort -u > "./sbom-artifacts/artifacts-${VERSION}.txt"
     - echo "Generated artifacts:"
     - ls -la sbom-artifacts/
